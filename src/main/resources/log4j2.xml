@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    8个优先级从高到低依次为：OFF、FATAL、ERROR、WARN、INFO、DEBUG、TRACE、 ALL。
+    如果设置优先级为WARN，那么OFF、FATAL、ERROR、WARN 4个级别的log能正常输出
+    设置为OFF 表示不记录log4j2本身的日志，
+ -->
+<!-- status：用来指定log4j本身的打印日志级别,monitorInterval:指定log4j自动重新配置的监测间隔时间 -->
+<configuration status="WARN" monitorInterval="30">
+    <!-- 自己设置属性，后面通过${}来访问 -->
+    <properties>
+        <!--<property name="LOG_HOME">${web:rootDir}/logs</property>-->
+        <property name="LOG_HOME">./logs</property>
+        <!--日志名称-->
+        <property name="LOG_NAME">user-service</property>
+        <!--日志格式-->
+        <property name="LOG_FORMAT">[%d{yyyy-MM-dd HH:mm:ss.SSS}] %p %t %c[%L] - %m %n</property>
+        <property name="LOG_FORMAT_CONSOLE">%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight{%-5level} [%t] %highlight{%c{1.}.%M(%L)}: %msg%n%throwable</property>
+        <!--备份目录- 根据年月建立文件夹 -->
+        <property name="BACKUP_HOME">${LOG_HOME}/$${date:yyyy-MM}</property>
+        <!--备份频率-->
+        <property name="BACK_HZ">%d{yyyy-MM-dd}</property>
+    </properties>
+    <appenders>
+        <!--控制台日志-->
+        <console name="console" target="SYSTEM_OUT">
+            <!--输出日志的格式-->
+            <PatternLayout pattern="${LOG_FORMAT_CONSOLE}" disableAnsi="false" noConsoleNoAnsi="false"/>
+        </console>
+
+        <!--info级别日志输入到文件-->
+        <RollingFile name="infoLog" fileName="${LOG_HOME}/${LOG_NAME}-info.log"
+                     filePattern="${BACKUP_HOME}/info/${LOG_NAME}-info-${BACK_HZ}-%i.log.gz">
+            <PatternLayout pattern="${LOG_FORMAT}"/>
+            <Policies>
+                <!-- 基于时间的触发策略。该策略主要是完成周期性的log文件封存工作。有两个参数：
+                interval，integer型，指定两次封存动作之间的时间间隔。单位:以日志的命名精度来确定单位，
+                    比如yyyy-MM-dd-HH 单位为小时，yyyy-MM-dd-HH-mm 单位为分钟
+                modulate，boolean型，说明是否对封存时间进行调制。若modulate=true，
+                    则封存时间将以0点为边界进行偏移计算。比如，modulate=true，interval=4hours，
+                    那么假设上次封存日志的时间为03:00，则下次封存日志的时间为04:00，
+                    之后的封存时间依次为08:00，12:00，16:00-->
+                <TimeBasedTriggeringPolicy modulate="true" interval="4"/>
+                <SizeBasedTriggeringPolicy size="50 MB" />
+            </Policies>
+            <!-- 默认的文件大小处理策略，max表示filePattern配置的%i的最大值，即表示当天文件归档的最大数量 -->
+            <DefaultRolloverStrategy max="10">
+                <!-- 删除处理策略，在配置的路径中搜索，maxDepth表示往下搜索的最大深度 -->
+                <Delete basePath="${BACKUP_HOME}/info/" maxDepth="2">
+                    <!-- 文件名搜索匹配，支持正则 -->
+                    <IfFileName glob="${LOG_NAME}-info*.log.gz"/>
+                    <!-- 最新修改时间超过7d则会被删除 -->
+                    <IfLastModified age="7d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+            <!-- 只保存info日志 -->
+            <Filters>
+                <ThresholdFilter level="WARN" onMatch="DENY" onMisMatch="NEUTRAL"/>
+                <ThresholdFilter level="INFO" onMatch="ACCEPT" onMisMatch="DENY"/>
+            </Filters>
+        </RollingFile>
+
+        <!--warn级别日志输入到文件-->
+        <RollingFile name="warnLog" fileName="${LOG_HOME}/${LOG_NAME}-warn.log"
+                     filePattern="${BACKUP_HOME}/warn/${LOG_NAME}-warn-${BACK_HZ}-%i.log.gz">
+            <PatternLayout pattern="${LOG_FORMAT}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy modulate="true" interval="4"/>
+                <SizeBasedTriggeringPolicy size="50 MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="15">
+                <Delete basePath="${BACKUP_HOME}/warn/" maxDepth="1">
+                    <IfFileName glob="${LOG_NAME}-warn*.log.gz"/>
+                    <IfLastModified age="7d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+            <!-- 只保存warn日志 -->
+            <Filters>
+                <ThresholdFilter level="ERROR" onMatch="DENY" onMisMatch="NEUTRAL"/>
+                <ThresholdFilter level="WARN" onMatch="ACCEPT" onMisMatch="DENY"/>
+            </Filters>
+        </RollingFile>
+
+        <!--error级别日志输入到文件-->
+        <RollingFile name="errorLog" fileName="${LOG_HOME}/${LOG_NAME}-error.log"
+                     filePattern="${BACKUP_HOME}/error/${LOG_NAME}-error-${BACK_HZ}-%i.log.gz">
+            <PatternLayout pattern="${LOG_FORMAT}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy modulate="true" interval="4"/>
+                <SizeBasedTriggeringPolicy size="50 MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="15">
+                <Delete basePath="${BACKUP_HOME}/error/" maxDepth="1">
+                    <IfFileName glob="${LOG_NAME}-error*.log.gz"/>
+                    <IfLastModified age="7d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+            <!-- 只保存error日志 -->
+            <ThresholdFilter level="ERROR"/>
+        </RollingFile>
+    </appenders>
+
+
+    <loggers>
+        <!--根日志配置-->
+        <root level="info">
+            <appender-ref ref="console"/>
+            <appender-ref ref="infoLog"/>
+            <appender-ref ref="warnLog"/>
+            <appender-ref ref="errorLog"/>
+        </root>
+
+        <logger name="com.alibaba.nacos.client.config.impl" level="warn"></logger>
+        <!--第三方日志配置-->
+        <!--<logger name="org.springframework" level="warn"/>
+        <logger name="org.springframework.boot.web" level="info"/>
+        <logger name="org.quartz" level="warn"/>
+        <logger name="org.mybatis" level="warn"/>-->
+    </loggers>
+</configuration>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>SpringBootEmail</title>
+    <style>
+        body {
+            text-align: center;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #welcome {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div id="welcome">
+    <h3>
+        欢迎使用 <span th:text="${project}"></span> - Powered By
+        <span th:text=" ${author}"></span>
+    </h3>
+    <h3>
+        您的验证码是： <span th:text="${authcode}"></span>
+
+    </h3>
+    <div style="text-align: center; padding: 4px">
+        验证码的有效期为10分钟,请您尽快使用:)
+    </div>
+
+</div>
+</body>
+</html>

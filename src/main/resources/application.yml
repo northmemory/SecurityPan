@@ -1,0 +1,50 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  #mysql
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/netdisk
+    username: root
+    password: 123456
+    type: com.alibaba.druid.pool.DruidDataSource
+  #redis
+  data:
+    redis:
+      port: 6379
+      host: localhost
+      database: 0
+  #邮件发送配置
+  mail:
+    host: smtp.163.com
+    port: 465
+    username: 13167351112@163.com
+    password: HOYSYYFTFVQDLSKC
+    protocol: smtp
+    test-connection: true
+    default-encoding: UTF-8
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+      mail.smtp.ssl.enable: true
+      mail.display.sendmail: SecurityPan
+
+#MybatisPlus
+mybatis-plus:
+  mapper-locations: classpath:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+#JWT secret
+Jwt:
+  secret: xiaopubuxiaopubuxiaopubuxiaopubuxiaopubuxiaopubu
+  expire_time: 3600 #秒
+
+#AuthCode
+authcode:
+  image:
+    expire-time: 5
