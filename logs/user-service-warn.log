@@ -1,3 +1,0 @@
-[2023-11-07 21:12:01.075] WARN lettuce-nioEventLoop-4-2 io.lettuce.core.protocol.ConnectionWatchdog[151] - Cannot reconnect to [localhost/<unresolved>:6379]: Connection refused: no further information: localhost/127.0.0.1:6379 
-[2023-11-07 21:12:10.165] WARN lettuce-nioEventLoop-4-14 io.lettuce.core.protocol.ConnectionWatchdog[151] - Cannot reconnect to [localhost/<unresolved>:6379]: Connection refused: no further information: localhost/127.0.0.1:6379 
-[2023-11-07 21:12:18.365] WARN lettuce-nioEventLoop-4-15 io.lettuce.core.protocol.ConnectionWatchdog[151] - Cannot reconnect to [localhost/<unresolved>:6379]: Connection refused: no further information: localhost/127.0.0.1:6379 
