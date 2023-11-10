@@ -12,7 +12,7 @@ public @interface VerifyParam {
     int min() default -1;
     int max() default -1;
 
-    boolean required() default false;
+    boolean required() default true;
 
     RegexEnum regexVerify() default RegexEnum.NO;
 }

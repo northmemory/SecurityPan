@@ -4,14 +4,18 @@ package com.xpb.aop;
 import com.xpb.aop.annotation.GlobalInterceptor;
 import com.xpb.aop.annotation.VerifyParam;
 import com.xpb.utils.RegexUtil;
+import com.xpb.utils.ResponseResult;
 import com.xpb.utils.exceptions.BusinessException;
 import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
 
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -23,23 +27,28 @@ public class GlobalOperationAspect {
     @Pointcut("@annotation(interceptor)")
     private void requestInterceptor(GlobalInterceptor interceptor){
     }
-    @Before("requestInterceptor(interceptor)")
-    public void BeforeAdvice(JoinPoint pointcut, GlobalInterceptor interceptor) throws NoSuchMethodException {
+    @Around("requestInterceptor(interceptor)")
+    public Object BeforeAdvice(ProceedingJoinPoint pointcut, GlobalInterceptor interceptor) throws Throwable {
         Object target = pointcut.getTarget();
         Object[] args = pointcut.getArgs();
         String methodName=pointcut.getSignature().getName();
         Class<?>[] parameterTypes = ((MethodSignature) pointcut.getSignature()).getMethod().getParameterTypes();
         Method method= target.getClass().getMethod(methodName,parameterTypes);
         if (interceptor.checkParams()){
-
+            try {
+                validateParams(method,args);
+            } catch (BusinessException e) {
+                return new ResponseResult(500,e.getMessage());
+            }
         }
+        return pointcut.proceed();
     }
 
     public void validateParams(Method m,Object[] arguments) throws BusinessException {
         Parameter[] parameters = m.getParameters();
         for (int i = 0; i < parameters.length; i++) {
             Parameter parameter=parameters[i];
-            String parameterName=parameter.getName();
+            String parameterName=parameter.getAnnotation(RequestParam.class)==null? parameter.getName() : parameter.getAnnotation(RequestParam.class).value();
             Object value=arguments[i];
             VerifyParam verifyParam=parameter.getAnnotation(VerifyParam.class);
             if (verifyParam==null) continue;
@@ -62,10 +71,10 @@ public class GlobalOperationAspect {
             throw new BusinessException(600,parameterName+"参数过长");
         //校验正则
         if ((!isEempty && verifyParam.regexVerify().getRegex()!="") && !RegexUtil.verify(value.toString(),verifyParam.regexVerify().getRegex()))
-            throw new BusinessException(600,parameterName+"正则匹配不通过");
+            throw new BusinessException(600,parameterName+"不满足要求的格式");
     }
 
-    public void checkObjValue(Parameter parameter, Object value, String parameterName){
+    public void checkObjValue(Parameter parameter, Object value, String parameterName) throws BusinessException {
         String typeName=parameter.getParameterizedType().getTypeName();
         Class aClass = null;
         try {
@@ -80,11 +89,11 @@ public class GlobalOperationAspect {
                 checkValue(value,annotation,parameterName);
             }
         } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
+            throw new BusinessException(600,"服务器错误正则匹配不通过");
         }catch (BusinessException e){
-            throw new RuntimeException(e);
+            throw e;
         } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+            throw new BusinessException(600,"服务器错误正则匹配不通过");
         }
     }
 }

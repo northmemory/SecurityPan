@@ -34,12 +34,12 @@ public class LoginServiceImpl implements LoginService {
     public ResponseResult passwordLogin(String username,String password,String uuid,String authCode) {
 
         String authCodeInRedis = (String)redisCache.getCacheObject(uuid);
-        if (!authCodeInRedis.equals(authCode))
-            throw new RuntimeException("验证码错误");
+        if (authCodeInRedis==null || !authCodeInRedis.equals(authCode))
+            return new ResponseResult(500,"验证码错误");
         UsernamePasswordAuthenticationToken authenticationToken=new UsernamePasswordAuthenticationToken(username,password);
         Authentication authenticate = manager.authenticate(authenticationToken);
         if (authenticate==null)
-            throw new RuntimeException("用户名或密码错误");
+            return new ResponseResult(500,"用户名或密码错误");
         //登录成功为用户生成jwt,并将jwt存入redis中
         LoginUser loginUser = (LoginUser) authenticate.getPrincipal();
         String jwt=resolveLoginUser(loginUser);

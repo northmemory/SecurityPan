@@ -12,8 +12,8 @@ public class RegexUtil {
     }
 
     public static boolean verify(String target,String regex){
-        Pattern pattern = Pattern.compile(target);
-        Matcher matcher = pattern.matcher(regex);
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(target);
         return matcher.matches();
     }
 }

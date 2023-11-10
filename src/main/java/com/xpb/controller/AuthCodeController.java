@@ -4,12 +4,15 @@ import cn.hutool.captcha.CaptchaUtil;
 import cn.hutool.captcha.LineCaptcha;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xpb.aop.annotation.CurrentLimiting;
+import com.xpb.aop.annotation.GlobalInterceptor;
+import com.xpb.aop.annotation.VerifyParam;
 import com.xpb.entities.User;
 import com.xpb.mapper.UserMapper;
 import com.xpb.service.MailService;
 import com.xpb.utils.RedisCache;
 import com.xpb.utils.RegexUtil;
 import com.xpb.utils.ResponseResult;
+import com.xpb.utils.enums.RegexEnum;
 import com.xpb.utils.enums.ResponseCode;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletResponse;
@@ -58,12 +61,8 @@ public class AuthCodeController {
     }
     @PostMapping("/getEmailAuthCode")
     @CurrentLimiting
-    public ResponseResult getEmailAuthCode(@RequestBody Map<String,String> requestBody){
-        String email=requestBody.get("email");
-        if (email==null)
-            return new ResponseResult(400,"email为空");
-        if (!RegexUtil.isEmail(email))
-            return new ResponseResult(400,"Email格式错误");
+    @GlobalInterceptor(checkParams = true)
+    public ResponseResult getEmailAuthCode(@RequestParam("email") @VerifyParam(regexVerify = RegexEnum.EMAIL) String email){
         LambdaQueryWrapper<User> wrapper=new LambdaQueryWrapper();
         wrapper.eq(User::getEmail,email);
         User user = userMapper.selectOne(wrapper);
