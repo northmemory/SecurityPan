@@ -1,6 +1,7 @@
 package com.xpb.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.xpb.entities.LoginUser;
 import com.xpb.entities.User;
 import com.xpb.mapper.UserMapper;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -54,17 +56,9 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
-    public ResponseResult emailLogin(String email, String authCode, String uuid, String emailAuthCode) {
-        String authCodeInRedis = (String)redisCache.getCacheObject(uuid);
-        if (authCodeInRedis==null)
-            return new ResponseResult(500,"图片验证码已经过期");
-        if (!authCodeInRedis.equals(authCode))
-            throw new RuntimeException("验证码错误");
-        String cacheEmailCode = (String) redisCache.getCacheObject(email);
-        if (cacheEmailCode==null)
-            return new ResponseResult(500,"邮箱验证码已经过期");
-        if (!cacheEmailCode.equals(emailAuthCode))
-            throw new RuntimeException("邮箱验证码错误");
+    public ResponseResult emailLogin(String email, String imageAuthCode, String uuid, String emailAuthCode) {
+        ResponseResult resolveResult = resolveAuthCode(uuid, imageAuthCode, email, emailAuthCode);
+        if (resolveResult!=null) return resolveResult;
         LambdaQueryWrapper<User> queryWrapper=new LambdaQueryWrapper<>();
         queryWrapper.eq(User::getEmail,email);
         User user = userMapper.selectOne(queryWrapper);
@@ -74,6 +68,55 @@ public class LoginServiceImpl implements LoginService {
         responseData.put("token",jwt);
         return new ResponseResult(ResponseCode.CODE_200.getCode(), responseData);
     }
+
+    @Override
+    public ResponseResult registration(String email, String nickname, String password, String uuid, String imageAuthCode, String emailAuthCode) {
+        ResponseResult resolveResult = resolveAuthCode(uuid, imageAuthCode, email, emailAuthCode);
+        if (resolveResult!=null) return resolveResult;
+        User newUser=new User();
+        newUser.setEmail(email);
+        newUser.setNickname(nickname);
+        BCryptPasswordEncoder passwordEncoder=new BCryptPasswordEncoder();
+        String encodePassword= passwordEncoder.encode(password);
+        newUser.setPassword(encodePassword);
+        int insert = userMapper.insert(newUser);
+        if (insert==0)
+            return new ResponseResult(500, "注册失败,请联系服务器管理员");
+        return new ResponseResult(ResponseCode.CODE_200.getCode(), "注册成功，请使用用户名密码或邮箱登录");
+    }
+
+    @Override
+    public ResponseResult resetPassword(String email, String emailAuthCode, String uuid, String imageAuthCode, String newPassword) {
+        ResponseResult resolveResult = resolveAuthCode(uuid, imageAuthCode, email, emailAuthCode);
+        if (resolveResult!=null) return resolveResult;
+        LambdaQueryWrapper<User> queryWrapper=new LambdaQueryWrapper<>();
+        queryWrapper.eq(User::getEmail,email).select(User::getPassword);
+        String oldPassword = userMapper.selectOne(queryWrapper).getPassword();
+        if (oldPassword.equals(newPassword)) return new ResponseResult(500,"传入的密码不能够和上次相同");
+        LambdaUpdateWrapper<User> updateWrapper=new LambdaUpdateWrapper<>();
+        updateWrapper.eq(User::getEmail,email).set(User::getPassword,newPassword);
+        int update = userMapper.update(null, updateWrapper);
+        if (update==0)
+            return new ResponseResult(500,"密码更新失败");
+        return new ResponseResult(200,"密码更新成功");
+    }
+
+    /*
+    * 处理图片验证码和邮件验证码*/
+    private ResponseResult resolveAuthCode(String uuid,String imageAuthCode,String email, String emailAuthCode){
+        String authCodeInRedis = (String)redisCache.getCacheObject(uuid);
+        if (authCodeInRedis==null)
+            return new ResponseResult(500,"图片验证码已经过期");
+        if (!authCodeInRedis.equals(imageAuthCode))
+            throw new RuntimeException("验证码错误");
+        String cacheEmailCode = (String) redisCache.getCacheObject(email);
+        if (cacheEmailCode==null)
+            return new ResponseResult(500,"邮箱验证码已经过期");
+        if (!cacheEmailCode.equals(emailAuthCode))
+            return new ResponseResult(500,"邮箱验证码错误");
+        return null;
+    }
+    /*处理登录成功后逻辑*/
     private String resolveLoginUser(LoginUser loginUser){
         String userId = loginUser.getUser().getUserId();
         String jwt = jwtUtil.creatJWT(userId, null);

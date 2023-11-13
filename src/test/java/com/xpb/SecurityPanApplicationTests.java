@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.List;
+import java.util.UUID;
 
 @SpringBootTest
 class SecurityPanApplicationTests {
@@ -26,9 +27,9 @@ class SecurityPanApplicationTests {
     @Test
     void userInsertTest() {
         User user=new User();
-        user.setNickname("xpb");
+        user.setNickname("xpb2");
         user.setPassword("$2a$10$CG0WroijPY13A2uW/B3dcOKKDR7vDVbes0x8UcweZHpp6pAnVAxoO");
-        user.setEmail("1105597511@qq.com");
+        user.setEmail("1597511@qq.com");
         userMapper.insert(user);
     }
     @Test
@@ -44,5 +45,11 @@ class SecurityPanApplicationTests {
         BCryptPasswordEncoder passwordEncoder=new BCryptPasswordEncoder();
         String encode= passwordEncoder.encode("123456");
         System.out.println(encode);
+    }
+    @Test
+    void uuidTest(){
+        UUID uuid = UUID.randomUUID();
+        System.out.println("生成的UUID为：" + uuid.toString());
+        return;
     }
 }

@@ -28,7 +28,7 @@ public class GlobalOperationAspect {
     private void requestInterceptor(GlobalInterceptor interceptor){
     }
     @Around("requestInterceptor(interceptor)")
-    public Object BeforeAdvice(ProceedingJoinPoint pointcut, GlobalInterceptor interceptor) throws Throwable {
+    public Object AroundAdvice(ProceedingJoinPoint pointcut, GlobalInterceptor interceptor) throws Throwable {
         Object target = pointcut.getTarget();
         Object[] args = pointcut.getArgs();
         String methodName=pointcut.getSignature().getName();

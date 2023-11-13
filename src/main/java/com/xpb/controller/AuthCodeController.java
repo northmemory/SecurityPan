@@ -65,11 +65,6 @@ public class AuthCodeController {
     @CurrentLimiting
     @GlobalInterceptor(checkParams = true)
     public ResponseResult getEmailAuthCode(@RequestParam("email") @VerifyParam(regexVerify = RegexEnum.EMAIL) String email){
-        LambdaQueryWrapper<User> wrapper=new LambdaQueryWrapper();
-        wrapper.eq(User::getEmail,email);
-        User user = userMapper.selectOne(wrapper);
-        if (user == null)
-            return new ResponseResult(400,"提供的邮件不存在");
         String authCode=generateRandomString(6);
         Context context=new Context();
         context.setVariable("project","SecurityPan");

@@ -8,7 +8,7 @@ import java.util.Date;
 @Data
 @TableName("user_info")
 public class User {
-    @TableId
+    @TableId(type = IdType.ASSIGN_ID)
     private String userId;
     private String password;
     private String nickname;
