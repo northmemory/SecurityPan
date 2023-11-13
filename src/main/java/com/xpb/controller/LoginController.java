@@ -29,13 +29,10 @@ public class LoginController {
         return loginService.passwordLogin(username,password,uuid,authCode);
     }
     @PostMapping("/emailLogin")
-    public ResponseResult emailLogin(@RequestBody Map<String,String> requestBody){
-        String email=requestBody.get("email");
-        String emailAuthcode=requestBody.get("emailAuthCode");
-        String uuid=requestBody.get("uuid");
-        String imageAuthCode=requestBody.get("imageAuthCode");
-        if (email==null || emailAuthcode==null || emailAuthcode==null ||uuid==null)
-            return new ResponseResult(500,"请求错误,邮箱或邮件验证码或uuid或图片验证码为空");
-        return loginService.emailLogin(email,imageAuthCode,uuid,emailAuthcode);
+    public ResponseResult emailLogin(@VerifyParam(regexVerify = RegexEnum.EMAIL) @RequestParam("email") String email,
+                                     @VerifyParam @RequestParam("emailAuthCode") String emailAuthCode,
+                                     @VerifyParam @RequestParam("uuid") String uuid,
+                                     @VerifyParam @RequestParam("imageAuthCode") String imageAuthCode){
+        return loginService.emailLogin(email,imageAuthCode,uuid,emailAuthCode);
     }
 }

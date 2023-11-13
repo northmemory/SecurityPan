@@ -52,7 +52,7 @@ public class CurrentLimitingAspect {
        Long currentCount = (Long) redisTemplate.execute(
                 new DefaultRedisScript<Long>(luaScript, Long.class),
                 Collections.singletonList(key), // KEYS[1]
-                String.valueOf(currentLimiting.time()) // ARGV[1]
+                currentLimiting.time() // ARGV[1]
         );
 
 

@@ -44,6 +44,8 @@ public class AuthCodeController {
 
     @Value("${authcode.image.expire-time}")
     private int imageAuthcodeExpireTime;
+    @Value("${authcode.email.expire-time}")
+    private int emailAuthcodeExpireTime;
 
     @GetMapping("/getImageAuthCode")
     @CurrentLimiting
@@ -74,7 +76,7 @@ public class AuthCodeController {
         context.setVariable("author","cascadeBo");
         context.setVariable("authcode",authCode);
         String emailTemplate = templateEngine.process("AuthCode", context);
-        redisCache.setCacheObject(email,authCode,30, TimeUnit.MINUTES);
+        redisCache.setCacheObject(email,authCode,emailAuthcodeExpireTime, TimeUnit.MINUTES);
         try {
             mailService.sendHtmlMail(email,"SecurityPan 验证码",emailTemplate);
         } catch (MessagingException e) {

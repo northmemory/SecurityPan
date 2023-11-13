@@ -47,4 +47,10 @@ Jwt:
 #AuthCode
 authcode:
   image:
-    expire-time: 5
+    expire-time: 5 #min
+  email:
+    expire-time: 5 #min
+
+#login
+login:
+  expire-time: 30 #days

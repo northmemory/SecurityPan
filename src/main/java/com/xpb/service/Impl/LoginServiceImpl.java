@@ -10,6 +10,7 @@ import com.xpb.utils.RedisCache;
 import com.xpb.utils.ResponseResult;
 import com.xpb.utils.enums.ResponseCode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class LoginServiceImpl implements LoginService {
@@ -30,6 +32,9 @@ public class LoginServiceImpl implements LoginService {
 
     @Autowired
     UserMapper userMapper;
+
+    @Value("${login.expire-time}")
+    Integer loginTime;
     @Override
     public ResponseResult passwordLogin(String username,String password,String uuid,String authCode) {
 
@@ -74,7 +79,7 @@ public class LoginServiceImpl implements LoginService {
         String jwt = jwtUtil.creatJWT(userId, null);
         loginUser.setJwt(jwt);
         //将用户信息存入redis
-        redisCache.setCacheObject("login"+userId,loginUser);
+        redisCache.setCacheObject("login"+userId,loginUser,loginTime, TimeUnit.DAYS);
         return jwt;
     }
 }
