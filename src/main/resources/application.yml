@@ -54,3 +54,8 @@ authcode:
 #login
 login:
   expire-time: 30 #days
+
+#File storage
+File:
+  file-path: E:\PanStorage
+  avatar-path: ${File.file-path}\avatar

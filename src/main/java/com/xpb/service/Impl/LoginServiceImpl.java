@@ -93,8 +93,10 @@ public class LoginServiceImpl implements LoginService {
         queryWrapper.eq(User::getEmail,email).select(User::getPassword);
         String oldPassword = userMapper.selectOne(queryWrapper).getPassword();
         if (oldPassword.equals(newPassword)) return new ResponseResult(500,"传入的密码不能够和上次相同");
+        BCryptPasswordEncoder passwordEncoder=new BCryptPasswordEncoder();
+        String encodeNewPassword= passwordEncoder.encode(newPassword);
         LambdaUpdateWrapper<User> updateWrapper=new LambdaUpdateWrapper<>();
-        updateWrapper.eq(User::getEmail,email).set(User::getPassword,newPassword);
+        updateWrapper.eq(User::getEmail,email).set(User::getPassword,encodeNewPassword);
         int update = userMapper.update(null, updateWrapper);
         if (update==0)
             return new ResponseResult(500,"密码更新失败");
