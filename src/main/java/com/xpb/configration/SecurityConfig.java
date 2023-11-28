@@ -64,7 +64,7 @@ public class SecurityConfig {
     }
 
 
-    /*@Bean
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http.csrf(csrf -> csrf.disable()) //关闭csrf
                 .cors(withDefaults()) //配置跨域，使用默认的CorsConfigurationSource为Bean名的source
@@ -74,12 +74,12 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class) //添加一个过滤器
                 .build();
-    }*/
-    @Bean
+    }
+    /*@Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http.csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests((authorizeHttpRequests)->authorizeHttpRequests.anyRequest().permitAll())
                 .logout((logoutRequest)->logoutRequest.permitAll())
                 .build();
-    }
+    }*/
 }

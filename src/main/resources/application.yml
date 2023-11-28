@@ -42,7 +42,7 @@ mybatis-plus:
 #JWT secret
 Jwt:
   secret: xiaopubuxiaopubuxiaopubuxiaopubuxiaopubuxiaopubu
-  expire_time: 3600 #秒
+  expire_time: 36000 #秒
 
 #AuthCode
 authcode:

@@ -12,4 +12,6 @@ public interface LoginService {
     ResponseResult registration(String email, String nickname, String password, String uuid, String imageAuthCode, String emailAuthCode);
 
     ResponseResult resetPassword(String email, String emailAuthCode, String uuid, String imageAuthCode, String newPassword);
+
+    ResponseResult logout();
 }

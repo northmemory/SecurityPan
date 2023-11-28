@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -67,6 +68,17 @@ public class LoginServiceImpl implements LoginService {
         Map<String,String> responseData=new HashMap<>();
         responseData.put("token",jwt);
         return new ResponseResult(ResponseCode.CODE_200.getCode(), responseData);
+    }
+
+    @Override
+    public ResponseResult logout() {
+        //获取SecurityContextHolder中的用户id 注意SecurityContextHolder是线程独立的，所以不需要删除操作,其他的请求是不同的
+        UsernamePasswordAuthenticationToken authentication = (UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        LoginUser principal =(LoginUser) authentication.getPrincipal();
+        String key="login"+principal.getUser().getUserId();
+        //删除Redis的数据
+        redisCache.deleteObject(key);
+        return new ResponseResult(200,"注销成功");
     }
 
     @Override
