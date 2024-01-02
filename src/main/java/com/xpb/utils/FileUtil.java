@@ -106,4 +106,13 @@ public class FileUtil {
         File file=new File(filePath);
         return file.exists();
     }
+
+    public static void createFolder(String filePath){
+        File directory=new File(filePath);
+        if(!directory.exists()){
+            boolean result = directory.mkdir();
+            if (!result)
+                log.error("创建文件夹失败");
+        }
+    }
 }

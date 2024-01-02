@@ -28,9 +28,8 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    @RequestMapping("/avatar/{userId}")
+    @GetMapping("/avatar")
     public ResponseResult getAvatar(HttpServletResponse response, @AuthenticationPrincipal LoginUser loginUser){
-        response.setContentType("image/jpg");
         response.setHeader("Cache-Control","max-age=3600");
         String userId=loginUser.getUser().getUserId();
         return userService.getAvatar(response,userId);

@@ -32,7 +32,10 @@ spring:
       mail.smtp.starttls.required: true
       mail.smtp.ssl.enable: true
       mail.display.sendmail: SecurityPan
-
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 2MB
 #MybatisPlus
 mybatis-plus:
   mapper-locations: classpath:/mapper/**/*.xml
@@ -59,3 +62,7 @@ login:
 File:
   file-path: E:\PanStorage
   avatar-path: ${File.file-path}\avatar
+
+#User Information
+User:
+  init-space: 1048576

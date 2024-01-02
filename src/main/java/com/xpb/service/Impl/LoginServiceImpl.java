@@ -18,7 +18,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -27,17 +29,20 @@ import java.util.concurrent.TimeUnit;
 public class LoginServiceImpl implements LoginService {
 
     @Autowired
-    AuthenticationManager manager;
+    private AuthenticationManager manager;
     @Autowired
-    JwtUtil jwtUtil;
+    private JwtUtil jwtUtil;
     @Autowired
-    RedisCache redisCache;
+    private RedisCache redisCache;
 
     @Autowired
-    UserMapper userMapper;
+    private UserMapper userMapper;
 
     @Value("${login.expire-time}")
-    Integer loginTime;
+    private Integer loginTime;
+
+    @Value("${File.file-path}")
+    private String filePath;
     @Override
     public ResponseResult passwordLogin(String username,String password,String uuid,String authCode) {
 
@@ -82,6 +87,7 @@ public class LoginServiceImpl implements LoginService {
     }
 
     @Override
+    @Transactional
     public ResponseResult registration(String email, String nickname, String password, String uuid, String imageAuthCode, String emailAuthCode) {
         ResponseResult resolveResult = resolveAuthCode(uuid, imageAuthCode, email, emailAuthCode);
         if (resolveResult!=null) return resolveResult;
@@ -91,6 +97,8 @@ public class LoginServiceImpl implements LoginService {
         BCryptPasswordEncoder passwordEncoder=new BCryptPasswordEncoder();
         String encodePassword= passwordEncoder.encode(password);
         newUser.setPassword(encodePassword);
+        newUser.setTotalSpace(1024*1024);
+        newUser.setUsedSpace(0L);
         int insert = userMapper.insert(newUser);
         if (insert==0)
             return new ResponseResult(500, "注册失败,请联系服务器管理员");

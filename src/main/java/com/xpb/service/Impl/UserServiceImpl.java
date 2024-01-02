@@ -1,5 +1,6 @@
 package com.xpb.service.Impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.xpb.entities.User;
 import com.xpb.mapper.UserMapper;
@@ -27,7 +28,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ResponseResult getAvatar(HttpServletResponse response, String userId) {
-        String userAvatarPath=avatarPath+"\\"+userId+".jpg";
+        LambdaQueryWrapper<User> queryWrapper=new LambdaQueryWrapper<>();
+        queryWrapper.eq(User::getUserId,userId);
+        String userAvatarPath = mapper.selectOne(queryWrapper).getAvatarDir();
+        String type = userAvatarPath.split("\\.")[1];
+        type=(type.equals("jpg"))? "jpeg":type;
+        response.setContentType("image/"+type);
         File avatar=new File(userAvatarPath);
         if(!avatar.exists()){
             return new ResponseResult(500,"用户头像不存在捏");
@@ -45,14 +51,11 @@ public class UserServiceImpl implements UserService {
     public ResponseResult uploadAvatar(String userId, MultipartFile avatar) {
         if(!ImageUtil.isImage(avatar))
             return new ResponseResult(500,"传入的图片格式错误");
-        String absPath=avatarPath+"\\"+userId+".jpg";
+        String absPath=avatarPath+"\\"+userId+"."+ImageUtil.detectFileFormat(avatar);
         if (FileUtil.fileExist(absPath))
             FileUtil.deleteFile(absPath);
         try {
             FileUtil.createFile(absPath);
-            if (ImageUtil.detectFileFormat(avatar)!="jpg") {
-                ImageUtil.convertToJpg(avatar.getInputStream(),absPath);
-            }
             FileUtil.saveFile(avatar.getInputStream(),absPath);
         } catch (IOException e) {
             log.error("头像保存失败");
@@ -60,6 +63,7 @@ public class UserServiceImpl implements UserService {
         }
         LambdaUpdateWrapper<User> wrapper=new LambdaUpdateWrapper<>();
         wrapper.eq(User::getUserId,userId).set(User::getAvatarDir,absPath);
+        mapper.update(null,wrapper);
         return new ResponseResult(200,"头像保存成功");
     }
 }
