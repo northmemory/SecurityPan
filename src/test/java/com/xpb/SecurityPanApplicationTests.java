@@ -3,6 +3,7 @@ package com.xpb;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.xpb.entities.User;
 import com.xpb.mapper.UserMapper;
 import org.junit.jupiter.api.Test;
@@ -51,5 +52,9 @@ class SecurityPanApplicationTests {
         UUID uuid = UUID.randomUUID();
         System.out.println("生成的UUID为：" + uuid.toString());
         return;
+    }
+    @Test
+    void IDworkerTest(){
+
     }
 }

@@ -69,7 +69,8 @@ public class SecurityConfig {
         return http.csrf(csrf -> csrf.disable()) //关闭csrf
                 .cors(withDefaults()) //配置跨域，使用默认的CorsConfigurationSource为Bean名的source
                 .sessionManagement((sessionManagement)->sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //不开启Session
-                .authorizeHttpRequests((authorizeHttpRequests)->authorizeHttpRequests.requestMatchers("/authCode/getImageAuthCode","/authCode/getEmailAuthCode","/login","/emailLogin")
+                .authorizeHttpRequests((authorizeHttpRequests)->authorizeHttpRequests.requestMatchers("/authCode/getImageAuthCode","/authCode/getEmailAuthCode","/login","/emailLogin"
+                        ,"/regis")
                         .anonymous() //匿名没登录的才能访问
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class) //添加一个过滤器

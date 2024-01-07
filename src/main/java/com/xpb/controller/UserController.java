@@ -42,5 +42,16 @@ public class UserController {
         String userId=loginUser.getUser().getUserId();
         return userService.uploadAvatar(userId,avatar);
     }
+    @GetMapping("/getTotalSpace")
+    public ResponseResult getTotalSpace(@AuthenticationPrincipal LoginUser loginUser){
+        String userId=loginUser.getUser().getUserId();
+        return userService.getTotalSize(userId);
+    }
+    @GetMapping("/getUsedSpace")
+    public ResponseResult getUsedSpace(@AuthenticationPrincipal LoginUser loginUser){
+        String userId=loginUser.getUser().getUserId();
+        return userService.getUsedSize(userId);
+    }
+
 
 }

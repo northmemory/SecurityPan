@@ -61,7 +61,7 @@ public class GlobalOperationAspect {
     }
 
     public void checkValue(Object value, VerifyParam verifyParam, String parameterName) throws BusinessException {
-        Boolean isEempty= value==null || value.toString()=="";
+        Boolean isEempty= value==null || value.toString().equals("");
         Integer length=value==null ? 0 : value.toString().length();
         //校验空值
         if (isEempty && verifyParam.required())

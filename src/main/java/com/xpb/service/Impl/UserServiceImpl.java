@@ -1,5 +1,6 @@
 package com.xpb.service.Impl;
 
+import cn.hutool.system.UserInfo;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.xpb.entities.User;
@@ -65,5 +66,21 @@ public class UserServiceImpl implements UserService {
         wrapper.eq(User::getUserId,userId).set(User::getAvatarDir,absPath);
         mapper.update(null,wrapper);
         return new ResponseResult(200,"头像保存成功");
+    }
+
+    @Override
+    public ResponseResult getTotalSize(String userId) {
+        LambdaQueryWrapper<User> wrapper=new LambdaQueryWrapper<>();
+        wrapper.select(User::getTotalSpace);
+        User user = mapper.selectOne(wrapper);
+        return new ResponseResult(200,user.getTotalSpace());
+    }
+
+    @Override
+    public ResponseResult getUsedSize(String userId) {
+        LambdaQueryWrapper<User> wrapper=new LambdaQueryWrapper<>();
+        wrapper.select(User::getUsedSpace);
+        User user = mapper.selectOne(wrapper);
+        return new ResponseResult(200,user.getUsedSpace());
     }
 }
