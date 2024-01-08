@@ -10,4 +10,8 @@ public class BusinessException extends Exception{
         super(message);
         this.wrongCode = wrongCode;
     }
+
+    public int getWrongCode() {
+        return wrongCode;
+    }
 }

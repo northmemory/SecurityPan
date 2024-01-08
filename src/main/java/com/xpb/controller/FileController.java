@@ -7,6 +7,7 @@ import com.xpb.entities.dto.FileUploadResultDto;
 import com.xpb.service.FileService;
 import com.xpb.utils.ResponseResult;
 import com.xpb.utils.enums.FileCategoryEnum;
+import com.xpb.utils.exceptions.BusinessException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -37,9 +38,15 @@ public class FileController {
                                      @VerifyParam  String fileMd5,
                                      @VerifyParam  Integer chunkIndex,
                                      @VerifyParam  Integer totalChunks
-                                     ){
+                                     )  {
         String userId=loginUser.getUser().getUserId();
-        FileUploadResultDto uploadResult = fileService.upload(userId, file, fileId, fileName, filePid, fileMd5, chunkIndex, totalChunks);
+
+        FileUploadResultDto uploadResult = null;
+        try {
+            uploadResult = fileService.upload(userId, file, fileId, fileName, filePid, fileMd5, chunkIndex, totalChunks);
+        } catch (BusinessException e) {
+            return new ResponseResult(e.getWrongCode(),e.getMessage());
+        }
         return new ResponseResult(200,uploadResult);
     }
 }

@@ -11,7 +11,7 @@ import java.lang.reflect.Field;
 @Slf4j
 public class FileUtil {
     //向流中传输文件
-    public static void readFile(OutputStream outputStream, String filePath){
+    public static void readFile(OutputStream outputStream, String filePath) throws RuntimeException{
         FileInputStream fileInputStream=null;
         try {
             fileInputStream=new FileInputStream(filePath);
@@ -66,7 +66,7 @@ public class FileUtil {
             file.delete();
         }
     }
-    public static void saveFile(InputStream inputStream,String filePath){
+    public static void saveFile(InputStream inputStream,String filePath) throws RuntimeException{
         FileOutputStream fileOutputStream=null;
         File file=createFile(filePath);
         try {

@@ -62,7 +62,15 @@ login:
 File:
   file-path: E:\PanStorage
   avatar-path: ${File.file-path}\avatar
+  temp-path: ${File.file-path}\temp
 
 #User Information
 User:
   init-space: 1048576
+
+#redis-key
+redis:
+  redis-key:
+    user-temp-size: SecurityPan:user:file:temp
+  redis-key-expire:
+    user-temp-size-expire: 60 #min

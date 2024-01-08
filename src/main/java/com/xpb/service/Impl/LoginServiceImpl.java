@@ -86,6 +86,8 @@ public class LoginServiceImpl implements LoginService {
         return new ResponseResult(200,"注销成功");
     }
 
+    @Value("User.init-space")
+    Long initSpace;
     @Override
     @Transactional
     public ResponseResult registration(String email, String nickname, String password, String uuid, String imageAuthCode, String emailAuthCode) {
@@ -97,7 +99,7 @@ public class LoginServiceImpl implements LoginService {
         BCryptPasswordEncoder passwordEncoder=new BCryptPasswordEncoder();
         String encodePassword= passwordEncoder.encode(password);
         newUser.setPassword(encodePassword);
-        newUser.setTotalSpace(1024*1024);
+        newUser.setTotalSpace(initSpace);
         newUser.setUsedSpace(0L);
         int insert = userMapper.insert(newUser);
         if (insert==0)
