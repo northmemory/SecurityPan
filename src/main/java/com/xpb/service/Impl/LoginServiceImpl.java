@@ -86,7 +86,7 @@ public class LoginServiceImpl implements LoginService {
         return new ResponseResult(200,"注销成功");
     }
 
-    @Value("User.init-space")
+    @Value("${User.init-space}")
     Long initSpace;
     @Override
     @Transactional

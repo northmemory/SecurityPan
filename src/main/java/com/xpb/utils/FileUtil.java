@@ -7,43 +7,28 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.lang.reflect.Field;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 
 @Slf4j
 public class FileUtil {
     //向流中传输文件
-    public static void readFile(OutputStream outputStream, String filePath) throws RuntimeException{
-        FileInputStream fileInputStream=null;
-        try {
-            fileInputStream=new FileInputStream(filePath);
+    public static boolean readFile(HttpServletResponse response, String filePath) {
+        try (OutputStream outputStream=response.getOutputStream();
+            FileInputStream fileInputStream=new FileInputStream(filePath)){
             byte[] buffer=new byte[1024];
             int len=0;
             while ((len = fileInputStream.read(buffer))!=-1){
                 outputStream.write(buffer,0,len);
             }
             outputStream.flush();
+            return true;
         } catch (FileNotFoundException e) {
             log.error("出问题了文件不存在QAQ");
-            throw new RuntimeException(e);
+            return false;
         } catch (IOException e) {
             log.error("IO错误");
-            throw new RuntimeException(e);
-        }finally {
-            if (fileInputStream!=null){
-                try {
-                    fileInputStream.close();
-                } catch (IOException e) {
-                    log.error("关闭输入流失败");
-                    throw new RuntimeException(e);
-                }
-            }
-            if (outputStream!=null){
-                try {
-                    outputStream.close();
-                } catch (IOException e) {
-                    log.error("关闭输出流失败");
-                    throw new RuntimeException(e);
-                }
-            }
+            return false;
         }
     }
     public static File createFile(String filePath){
@@ -52,11 +37,11 @@ public class FileUtil {
             try {
                 file.createNewFile();
             } catch (IOException e) {
-                log.error("文件创建失败");
-                throw new RuntimeException(e);
+                log.error("["+filePath+"]文件创建失败");
+                return null;
             }
         }else {
-            log.error("文件已经存在");
+            log.error("["+filePath+"]文件已经存在");
         }
         return file;
     }
@@ -66,42 +51,62 @@ public class FileUtil {
             file.delete();
         }
     }
-    public static void saveFile(InputStream inputStream,String filePath) throws RuntimeException{
-        FileOutputStream fileOutputStream=null;
+    public static boolean saveFile(MultipartFile multipartFile,String filePath){
         File file=createFile(filePath);
-        try {
-            fileOutputStream=new FileOutputStream(file);
+        if (file==null){
+            log.error("创建文件失败");
+            return false;
+        }
+        try(InputStream inputStream=multipartFile.getInputStream();
+            FileOutputStream fileOutputStream=new FileOutputStream(file)) {
             byte[] buffer=new byte[1024];
             int len=0;
             while ((len = inputStream.read(buffer))!=-1){
                 fileOutputStream.write(buffer,0,len);
             }
             fileOutputStream.flush();
+            return true;
         } catch (FileNotFoundException e) {
-            log.error("文件不存在");
-            throw new RuntimeException(e);
+            log.error("["+filePath+"]文件不存在");
+            return false;
         } catch (IOException e) {
-            log.error("文件写入失败");
-            throw new RuntimeException(e);
-        }finally {
-            if (inputStream!=null){
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    log.error("关闭输入流失败");
-                    throw new RuntimeException(e);
-                }
-            }
-            if (fileOutputStream!=null){
-                try {
-                    fileOutputStream.close();
-                } catch (IOException e) {
-                    log.error("关闭文件输出流失败");
-                    throw new RuntimeException(e);
-                }
-            }
+            log.error("["+filePath+"]文件写入失败");
+            return false;
         }
     }
+    public static boolean mergeFile(String fileFolder,int num, String targetPath, String targetFileName){
+        String targetAbsolute=targetPath+"/"+targetFileName;
+        File targetFile=new File(targetAbsolute);
+        if (!targetFile.getParentFile().exists()){
+            targetFile.getParentFile().mkdirs();
+        }
+        if (createFile(targetAbsolute)==null){
+            log.error("创建文件失败");
+            return false;
+        }
+        try (FileOutputStream out= new FileOutputStream(targetFile)){
+            byte[] buffer=new byte[1024];
+            int len=0;
+            for (int i = 0; i < num ; i++) {
+                File sliceI=new File(fileFolder+"/"+i);
+                try (InputStream input=new FileInputStream(sliceI)){
+                    while ((len = input.read(buffer))!=-1){
+                        out.write(buffer,0,len);
+                    }
+                }catch (IOException e){
+                    log.error("读取分片文件["+sliceI.getName()+"]失败");
+                    return false;
+                }
+            }
+            out.flush();
+            return true;
+        }catch (IOException e) {
+            log.error("创建新合并文件["+targetAbsolute+"]失败");
+            return false;
+        }
+    }
+
+
     public static boolean fileExist(String filePath){
         File file=new File(filePath);
         return file.exists();
@@ -113,6 +118,28 @@ public class FileUtil {
             boolean result = directory.mkdir();
             if (!result)
                 log.error("创建文件夹失败");
+        }
+    }
+
+    public static void deleteFolder(String folderPath) {
+        Path folder = Paths.get(folderPath);
+        try {
+            Files.walkFileTree(folder, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    Files.delete(file);
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                    Files.delete(dir);
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+
+        } catch (IOException e) {
+            log.error("删除缓存失败");
         }
     }
 }

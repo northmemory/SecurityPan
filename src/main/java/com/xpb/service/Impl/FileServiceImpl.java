@@ -60,6 +60,8 @@ public class FileServiceImpl implements FileService {
 
     @Value("${File.temp-path}")
     private String tempPath;
+    @Value("${File.file-storage-path}")
+    private String fileStoragePath;
     @Override
     @Transactional
     public FileUploadResultDto upload(String userId, MultipartFile file, String fileId, String fileName,
@@ -83,19 +85,7 @@ public class FileServiceImpl implements FileService {
                 if (user.getTotalSpace() - user.getUsedSpace() < fileInfo.getFileSize()) {
                     throw new BusinessException(ResponseCode.CODE_904.getCode(), ResponseCode.CODE_904.getMsg());
                 }
-                fileInfo.setFileId(fileId);
-                fileInfo.setFilePid(filePid);
-                fileInfo.setFileMd5(fileMd5);
-                fileInfo.setCreateTime(curDate);
-                fileInfo.setUserId(userId);
-                fileName = renameIfFileNameExist(userId, fileName, filePid);
-                fileInfo.setFileName(fileName);
-                fileInfo.setDelFlag(FileDeleteEnum.USING.getCode());
-                fileInfo.setStatus(FileStatusEnum.USING.getCode());
-                int insert = fileInfoMapper.insert(fileInfo);
-                if (insert == 0) {
-                    throw new BusinessException(ResponseCode.CODE_500.getCode(), ResponseCode.CODE_500.getMsg() + ":文件信息更新失败");
-                }
+                saveFileInfo(userId, fileId, fileName, filePid, fileMd5, curDate, fileInfo);
                 fileUploadResultDto.setStatus(FileStatusEnum.USING.getCode());
                 fileUploadResultDto.setStatusDescription(FileStatusEnum.USING.getDescription());
                 //更新用户使用空间
@@ -121,21 +111,45 @@ public class FileServiceImpl implements FileService {
         }
         //保存分片文件
         String chunkFileName=tempFolderName+"/"+chunkIndex;
-        try {
-            FileUtil.saveFile(file.getInputStream(),chunkFileName);
-            if (chunkIndex<chunks){
-                fileUploadResultDto.setStatus(FileUploadStatusEnum.UPLOADING.getCode());
-                fileUploadResultDto.setStatusDescription(FileUploadStatusEnum.UPLOADING.getDescription());
-                saveRedisTempSize(userId,fileId,file.getSize());
-                return fileUploadResultDto;
-            }
-            //后续逻辑若是最后一个上传成功则合并文件
-        } catch (IOException e) {
-            log.error("分片文件保存失败");
+        if (!FileUtil.saveFile(file,chunkFileName)){
             throw new BusinessException(ResponseCode.CODE_500.getCode(),ResponseCode.CODE_500.getMsg());
+        }
+        if (chunkIndex<chunks-1){
+            fileUploadResultDto.setStatus(FileUploadStatusEnum.UPLOADING.getCode());
+            fileUploadResultDto.setStatusDescription(FileUploadStatusEnum.UPLOADING.getDescription());
+            saveRedisTempSize(userId,fileId,file.getSize());
+            return fileUploadResultDto;
+        } else if (chunkIndex==chunks-1) {
+            fileUploadResultDto.setStatus(FileUploadStatusEnum.UPLOAD_FININSED.getCode());
+            fileUploadResultDto.setStatusDescription(FileUploadStatusEnum.UPLOAD_FININSED.getDescription());
+            FileUtil.mergeFile(tempFolderName,chunks,fileStoragePath+'/'+userId,fileName);
+            deleteRedisTempSize(userId,fileId);
+            //删除缓存文件夹和里面的内容
+            FileUtil.deleteFolder(tempFolderName);
+            //保存到数据库中,保存的信息不够，明天要加
+            FileInfo fileInfo=new FileInfo();
+            saveFileInfo(userId, fileId, fileName, filePid, fileMd5, curDate, fileInfo);
+            return fileUploadResultDto;
         }
         return fileUploadResultDto;
     }
+
+    private void saveFileInfo(String userId, String fileId, String fileName, String filePid, String fileMd5, Date curDate, FileInfo fileInfo) throws BusinessException {
+        fileInfo.setFileId(fileId);
+        fileInfo.setFilePid(filePid);
+        fileInfo.setFileMd5(fileMd5);
+        fileInfo.setCreateTime(curDate);
+        fileInfo.setUserId(userId);
+        fileName = renameIfFileNameExist(userId, fileName, filePid);
+        fileInfo.setFileName(fileName);
+        fileInfo.setDelFlag(FileDeleteEnum.USING.getCode());
+        fileInfo.setStatus(FileStatusEnum.USING.getCode());
+        int insert = fileInfoMapper.insert(fileInfo);
+        if (insert == 0) {
+            throw new BusinessException(ResponseCode.CODE_500.getCode(), ResponseCode.CODE_500.getMsg() + ":文件信息更新失败");
+        }
+    }
+
     //如果文件名重复命名为filename(i).xxx
     public String renameIfFileNameExist(String userId,String fileName,String filePid){
        LambdaQueryWrapper<FileInfo> wrapper=new LambdaQueryWrapper<>();
@@ -160,9 +174,9 @@ public class FileServiceImpl implements FileService {
         }
         return fileName;
     }
-    @Value("redis.redis-key.user-temp-size")
+    @Value("${redis.redis-key.user-temp-size}")
     String redisKeyPre;
-    public Long getRedisTempSize(String userId,String fileId){
+    private Long getRedisTempSize(String userId,String fileId){
         String redisKey=redisKeyPre+":"+userId+fileId;
         Object size = redisCache.getCacheObject(redisKey);
         if (size==null)
@@ -173,15 +187,19 @@ public class FileServiceImpl implements FileService {
             return (Long) size;
         return null;
     }
-    @Value("redis.redis-key-expire.user-temp-size-expire")
+    @Value("${redis.redis-key-expire.user-temp-size-expire}")
     Integer redisKeyExpireTime;
-    public void saveRedisTempSize(String userId,String fileId,Long fileSize){
+    private void saveRedisTempSize(String userId,String fileId,Long fileSize){
         String redisKey=redisKeyPre+":"+userId+fileId;
         Long currentSize=redisCache.getCacheObject(redisKey);
         if (currentSize==null)
             redisCache.setCacheObject(redisKey,fileSize,redisKeyExpireTime, TimeUnit.MINUTES);
         else
             redisCache.setCacheObject(redisKey,fileSize+currentSize,redisKeyExpireTime, TimeUnit.MINUTES);
+    }
+    private boolean deleteRedisTempSize(String userId,String fileId){
+        String redisKey=redisKeyPre+":"+userId+fileId;
+        return redisCache.deleteObject(redisKey);
     }
 
 }

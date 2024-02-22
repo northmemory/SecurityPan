@@ -63,6 +63,7 @@ File:
   file-path: E:\PanStorage
   avatar-path: ${File.file-path}\avatar
   temp-path: ${File.file-path}\temp
+  file-storage-path: ${File.file-path}\file
 
 #User Information
 User:

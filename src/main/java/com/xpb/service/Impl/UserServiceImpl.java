@@ -39,11 +39,8 @@ public class UserServiceImpl implements UserService {
         if(!avatar.exists()){
             return new ResponseResult(500,"用户头像不存在捏");
         }
-        try {
-            FileUtil.readFile(response.getOutputStream(),userAvatarPath);
-        } catch (IOException e) {
-            log.error("获取头像输入流失败");
-            throw new RuntimeException(e);
+        if (!FileUtil.readFile(response,userAvatarPath)){
+            log.error("头像传输失败");
         }
         return null;
     }
@@ -55,12 +52,10 @@ public class UserServiceImpl implements UserService {
         String absPath=avatarPath+"\\"+userId+"."+ImageUtil.detectFileFormat(avatar);
         if (FileUtil.fileExist(absPath))
             FileUtil.deleteFile(absPath);
-        try {
-            FileUtil.createFile(absPath);
-            FileUtil.saveFile(avatar.getInputStream(),absPath);
-        } catch (IOException e) {
+
+        if (FileUtil.createFile(absPath)==null || FileUtil.saveFile(avatar,absPath) ){
             log.error("头像保存失败");
-            return new ResponseResult(500,"头像保存失败");
+            return new ResponseResult(500,"用户头像上传失败");
         }
         LambdaUpdateWrapper<User> wrapper=new LambdaUpdateWrapper<>();
         wrapper.eq(User::getUserId,userId).set(User::getAvatarDir,absPath);

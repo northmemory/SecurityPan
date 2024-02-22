@@ -7,19 +7,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
 import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.Collections;
-import java.util.concurrent.TimeUnit;
 
 @Aspect
 @Component
@@ -27,6 +26,15 @@ import java.util.concurrent.TimeUnit;
 public class CurrentLimitingAspect {
     @Autowired
     public RedisTemplate redisTemplate;
+
+    private static DefaultRedisScript<Long> defaultRedisScript;
+
+    static {
+        // Lua脚本, redis是单线程的同时只能执行一个lua脚本,也就是说把并发控制交给了redis
+        defaultRedisScript = new DefaultRedisScript<Long>();
+        defaultRedisScript.setResultType(Long.class);
+        defaultRedisScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("lua/TrafficLimit.lua")));
+    }
 
     @Pointcut("@annotation(currentLimiting)")
     public void controllerAspect(CurrentLimiting currentLimiting) {
@@ -39,18 +47,9 @@ public class CurrentLimitingAspect {
         String ip=request.getHeader("X-Forwarded-For")==null ? request.getRemoteAddr() : request.getHeader("X-Forwarded-For").split(",")[0];
         String url=request.getRequestURL().toString();
         String key=ip+url;
-        // Lua脚本, redis是单线程的同时只能执行一个lua脚本,也就是说把并发控制交给了redis
-        String luaScript = "if redis.call('exists', KEYS[1]) == 0 then " +
-                "    redis.call('set', KEYS[1], '1') " +
-                "    redis.call('expire', KEYS[1], ARGV[1]) " +
-                "    return 1 " +
-                "else " +
-                "    return redis.call('incr', KEYS[1]) " +
-                "end";
-
         // 执行Lua脚本
-       Long currentCount = (Long) redisTemplate.execute(
-                new DefaultRedisScript<Long>(luaScript, Long.class),
+        Long currentCount = (Long) redisTemplate.execute(
+                defaultRedisScript,
                 Collections.singletonList(key), // KEYS[1]
                 currentLimiting.time() // ARGV[1]
         );

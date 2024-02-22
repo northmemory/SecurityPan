@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.xpb.entities.User;
 import com.xpb.mapper.UserMapper;
+import com.xpb.utils.FileUtil;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -54,7 +55,13 @@ class SecurityPanApplicationTests {
         return;
     }
     @Test
-    void IDworkerTest(){
-
+    void mergeFileTest(){
+        if (FileUtil.mergeFile("E:/PanStorage/test",3,"E:/PanStorage/file","ToX.mp3")){
+            System.out.println("合并成功");
+        }
+    }
+    @Test
+    void deleteCache(){
+        FileUtil.deleteFolder("E:\\PanStorage\\temp\\17606415764755046421717086568207556609");
     }
 }
