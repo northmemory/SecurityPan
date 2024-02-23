@@ -1,18 +1,23 @@
 package com.xpb.utils.enums;
 
+import java.util.Arrays;
+import java.util.HashSet;
+
 public enum FileCategoryEnum {
-    VIDEO(1,"video","视频"),
-    MUSIC(2,"music","音乐"),
-    IMAGE(3,"image","图片"),
-    DOC(4,"doc","文档"),
-    OTHER(5,"other","其它");
+    VIDEO(1,"video",new HashSet<String>(Arrays.asList("mp4","avi","mov","MKV","mpeg","mpg")),"视频"),
+    MUSIC(2,"music",new HashSet<>(Arrays.asList("jpeg","jpg","png","gif","tiff","svg")),"音乐"),
+    IMAGE(3,"image",new HashSet<>(Arrays.asList("mp3","wav","flac")),"图片"),
+    DOC(4,"doc",new HashSet<>(Arrays.asList("doc","docx","ppt","pdf","txt","xls","xlsx","csv","latex")),"文档"),
+    OTHER(5,"other",null,"其它");
 
 
     private Integer category;
     private String code;
+
+    private HashSet<String> suffix;
     private String description;
 
-    FileCategoryEnum(Integer category, String code, String description) {
+    FileCategoryEnum(Integer category, String code, HashSet<String> set ,String description) {
         this.category = category;
         this.code = code;
         this.description = description;
@@ -32,5 +37,9 @@ public enum FileCategoryEnum {
 
     public String getCode() {
         return code;
+    }
+
+    public HashSet<String> getSuffix(){
+        return suffix;
     }
 }
