@@ -7,6 +7,7 @@ import com.xpb.entities.FileInfo;
 import com.xpb.entities.User;
 import com.xpb.entities.dto.FileInfoDto;
 import com.xpb.entities.dto.FileUploadResultDto;
+import com.xpb.listener.message.FileMergingMessage;
 import com.xpb.mapper.FileInfoMapper;
 import com.xpb.mapper.UserMapper;
 import com.xpb.service.FileService;
@@ -15,7 +16,9 @@ import com.xpb.utils.RedisCache;
 import com.xpb.utils.ResponseResult;
 import com.xpb.utils.enums.*;
 import com.xpb.utils.exceptions.BusinessException;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -40,6 +43,9 @@ public class FileServiceImpl implements FileService {
     @Autowired
     private RedisCache redisCache;
 
+    @Resource
+    private RabbitTemplate rabbitTemplate;
+
     @Override
     public List<FileInfoDto> loadFileListByCategory(String category, String userId) {
         LambdaQueryWrapper<FileInfo> wrapper=new LambdaQueryWrapper();
@@ -58,6 +64,9 @@ public class FileServiceImpl implements FileService {
     private String tempPath;
     @Value("${File.file-storage-path}")
     private String fileStoragePath;
+    @Value("${mq-name.file-merge}")
+    private String fileMergeQueue;
+
     @Override
     @Transactional
     public FileUploadResultDto upload(String userId, MultipartFile file, String fileId, String fileName,
@@ -123,10 +132,7 @@ public class FileServiceImpl implements FileService {
             }
             //保存分片文件
             String chunkFileName=tempFolderName+"/"+chunkIndex;
-            if (!FileUtil.saveFile(file,chunkFileName)){
-                accident=true;
-                throw new BusinessException(ResponseCode.CODE_500.getCode(),ResponseCode.CODE_500.getMsg());
-            }
+            FileUtil.saveFile(file.getInputStream(),chunkFileName);
             if (chunkIndex<chunks-1){
                 fileUploadResultDto.setStatus(FileUploadStatusEnum.UPLOADING.getCode());
                 fileUploadResultDto.setStatusDescription(FileUploadStatusEnum.UPLOADING.getDescription());
@@ -141,7 +147,7 @@ public class FileServiceImpl implements FileService {
                 String mouth=format.format(new Date());
                 fileName = renameIfFileNameExist(userId, fileName, filePid);
                 String filePath=fileStoragePath+'/'+mouth+'/'+fileName;
-                String[] fileNameSlice=fileName.split(".");
+                String[] fileNameSlice=fileName.split("\\.");
                 String suffix=fileNameSlice[fileNameSlice.length-1];
                 Integer type=getFileCategory(suffix);
                 Long size=redisCache.getCacheObject(redisKeyPre+':'+userId+fileId);
@@ -167,12 +173,17 @@ public class FileServiceImpl implements FileService {
                     throw new BusinessException(ResponseCode.CODE_500.getCode(), ResponseCode.CODE_500.getMsg() + ":文件信息更新失败");
                 }
                 //合并文件并，删除缓存文件夹和里面的内容，未来改成异步操作
-                FileUtil.mergeFile(tempFolderName,chunks,fileStoragePath+'/'+userId,fileName);
-                FileUtil.deleteFolder(tempFolderName);
+                /*FileUtil.mergeFile(tempFolderName,chunks,filePath);
+                FileUtil.deleteFolder(tempFolderName);*/
+                rabbitTemplate.convertAndSend(fileMergeQueue,new FileMergingMessage(tempFolderName,chunks,filePath));
                 return fileUploadResultDto;
             }
             return fileUploadResultDto;
-        }finally {
+        } catch (IOException e){
+            accident=true;
+            log.error(userId+"的"+fileId+"文件IO异常");
+            throw new BusinessException(ResponseCode.CODE_500.getCode(), "文件传输异常");
+        } finally {
             if (accident)
                 FileUtil.deleteFolder(tempPath+"/"+fileId+userId);
         }

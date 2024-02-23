@@ -9,6 +9,7 @@ import com.xpb.service.UserService;
 import com.xpb.utils.FileUtil;
 import com.xpb.utils.ImageUtil;
 import com.xpb.utils.ResponseResult;
+import com.xpb.utils.exceptions.BusinessException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,8 +40,11 @@ public class UserServiceImpl implements UserService {
         if(!avatar.exists()){
             return new ResponseResult(500,"用户头像不存在捏");
         }
-        if (!FileUtil.readFile(response,userAvatarPath)){
+        try {
+            FileUtil.readFile(response.getOutputStream(),userAvatarPath);
+        } catch (IOException e) {
             log.error("头像传输失败");
+            return new ResponseResult(500,"头像传输异常");
         }
         return null;
     }
@@ -52,10 +56,12 @@ public class UserServiceImpl implements UserService {
         String absPath=avatarPath+"\\"+userId+"."+ImageUtil.detectFileFormat(avatar);
         if (FileUtil.fileExist(absPath))
             FileUtil.deleteFile(absPath);
-
-        if (FileUtil.createFile(absPath)==null || FileUtil.saveFile(avatar,absPath) ){
-            log.error("头像保存失败");
-            return new ResponseResult(500,"用户头像上传失败");
+        try {
+            FileUtil.createFile(absPath);
+            FileUtil.saveFile(avatar.getInputStream(),absPath);
+        } catch (IOException e) {
+            log.error(userId+"头像IO异常");
+            return new ResponseResult(500,"服务器头像保存异常");
         }
         LambdaUpdateWrapper<User> wrapper=new LambdaUpdateWrapper<>();
         wrapper.eq(User::getUserId,userId).set(User::getAvatarDir,absPath);

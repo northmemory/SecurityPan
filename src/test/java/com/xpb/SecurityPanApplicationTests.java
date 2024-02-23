@@ -7,7 +7,9 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.xpb.entities.User;
 import com.xpb.mapper.UserMapper;
 import com.xpb.utils.FileUtil;
+import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -19,6 +21,9 @@ import java.util.UUID;
 class SecurityPanApplicationTests {
     @Autowired
     UserMapper userMapper;
+
+    @Resource
+    private RabbitTemplate rabbitTemplate;
     @Test
     void userMapperAllTest() {
         System.out.println("--------selectAll method test");
@@ -55,10 +60,9 @@ class SecurityPanApplicationTests {
         return;
     }
     @Test
-    void mergeFileTest(){
-        if (FileUtil.mergeFile("E:/PanStorage/test",3,"E:/PanStorage/file","ToX.mp3")){
-            System.out.println("合并成功");
-        }
+    void mqTest(){
+        String queueName="simple.queue";
+        rabbitTemplate.convertAndSend(queueName,"hello world!");
     }
     @Test
     void deleteCache(){

@@ -36,6 +36,13 @@ spring:
     multipart:
       max-file-size: 2MB
       max-request-size: 2MB
+  #rabbit-mq
+  rabbitmq:
+    host: 10.122.194.131
+    port: 5672
+    virtual-host: /Pan
+    username: xpb
+    password: 123456
 #MybatisPlus
 mybatis-plus:
   mapper-locations: classpath:/mapper/**/*.xml
@@ -75,3 +82,7 @@ redis:
     user-temp-size: SecurityPan:user:file:temp
   redis-key-expire:
     user-temp-size-expire: 60 #min
+
+#mq-name
+mq-name:
+  file-merge: simple.queue
