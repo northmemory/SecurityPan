@@ -2,6 +2,7 @@ package com.xpb.aop;
 
 import com.xpb.aop.annotation.CurrentLimiting;
 import com.xpb.utils.ResponseResult;
+import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -24,7 +25,7 @@ import java.util.Collections;
 @Component
 @Slf4j
 public class CurrentLimitingAspect {
-    @Autowired
+    @Resource
     public RedisTemplate redisTemplate;
 
     private static DefaultRedisScript<Long> defaultRedisScript;

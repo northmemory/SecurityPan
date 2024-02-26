@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableTransactionManagement
 @EnableWebSecurity
 @MapperScan("com.xpb.mapper")
-@EnableAsync
 public class SecurityPanApplication {
 
     public static void main(String[] args) {
