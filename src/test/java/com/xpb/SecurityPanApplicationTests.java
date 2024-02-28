@@ -9,9 +9,14 @@ import com.xpb.mapper.UserMapper;
 import com.xpb.utils.FileUtil;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageDeliveryMode;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.util.List;
@@ -19,6 +24,8 @@ import java.util.UUID;
 
 @SpringBootTest
 class SecurityPanApplicationTests {
+    @Resource
+    RedisTemplate redisTemplate;
     @Autowired
     UserMapper userMapper;
 
@@ -66,6 +73,16 @@ class SecurityPanApplicationTests {
     }
     @Test
     void deleteCache(){
-        FileUtil.deleteFolder("E:\\PanStorage\\temp\\17606415764755046421717086568207556609");
+        redisTemplate.opsForValue().set("1","1");
+        System.out.println(redisTemplate.opsForValue().get("1"));
+    }
+    @Test
+    void LazyQueueTest(){
+        MessageProperties messageProperties = new MessageProperties();
+        messageProperties.setDeliveryMode(MessageDeliveryMode.NON_PERSISTENT);
+        Message message=new Message("hello".getBytes(),messageProperties);
+        for (int i = 0; i < 1000000; i++) {
+            rabbitTemplate.convertAndSend("lazy.queue",message);
+        }
     }
 }

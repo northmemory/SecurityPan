@@ -15,8 +15,9 @@ spring:
   data:
     redis:
       port: 6379
-      host: localhost
+      host: 10.122.194.131
       database: 0
+      password: 123456
   #邮件发送配置
   mail:
     host: smtp.163.com
@@ -43,6 +44,20 @@ spring:
     virtual-host: /Pan
     username: xpb
     password: 123456
+    listener:
+      simple:
+        prefetch: 1
+        acknowledge-mode: auto
+        retry:
+          enabled: true
+    publisher-confirm-type: correlated
+    template:
+      retry:
+        max-attempts: 3
+        initial-interval: 1000ms
+        multiplier: 1
+        enabled: true
+
 #MybatisPlus
 mybatis-plus:
   mapper-locations: classpath:/mapper/**/*.xml

@@ -10,7 +10,10 @@ import java.util.List;
 public interface FileService {
     List<FileInfoDto> loadFileListByCategory(String category, String userId);
 
+
     FileUploadResultDto upload(String userId, MultipartFile file, String fileId, String fileName
             ,String filePid,String fileMd5, Integer chunkIndex, Integer chunks) throws BusinessException;
+
+
 
 }

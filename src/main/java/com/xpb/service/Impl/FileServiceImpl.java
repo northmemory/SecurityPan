@@ -18,6 +18,7 @@ import com.xpb.utils.enums.*;
 import com.xpb.utils.exceptions.BusinessException;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,6 +61,7 @@ public class FileServiceImpl implements FileService {
         return fileInfoDtos;
     }
 
+
     @Value("${File.temp-path}")
     private String tempPath;
     @Value("${File.file-storage-path}")
@@ -79,7 +81,6 @@ public class FileServiceImpl implements FileService {
             }
             fileUploadResultDto.setFileId(fileId);
             Date curDate=new Date();
-            LambdaQueryWrapper<User> wrapper=new LambdaQueryWrapper<>();
             User user = userMapper.selectById(userId);
             //检查第一次上传时文件md5是否已经存在于数据库中
             if(chunkIndex==0) {
@@ -105,13 +106,13 @@ public class FileServiceImpl implements FileService {
                     if (insert == 0) {
                         throw new BusinessException(ResponseCode.CODE_500.getCode(), ResponseCode.CODE_500.getMsg() + ":文件信息更新失败");
                     }
-                    fileUploadResultDto.setStatus(FileStatusEnum.USING.getCode());
-                    fileUploadResultDto.setStatusDescription(FileStatusEnum.USING.getDescription());
+                    fileUploadResultDto.setStatus(FileUploadStatusEnum.UPLOAD_SECOND.getCode());
+                    fileUploadResultDto.setStatusDescription(FileUploadStatusEnum.UPLOAD_SECOND.getDescription());
                     //更新用户使用空间
                     LambdaUpdateWrapper<User> updateWrapper = new LambdaUpdateWrapper<>();
                     updateWrapper.eq(User::getUserId, userId);
                     updateWrapper.set(User::getUsedSpace, user.getUsedSpace() + fileInfo.getFileSize());
-                    int update = userMapper.update(null, wrapper);
+                    int update = userMapper.update(null, updateWrapper);
                     if (update == 0) {
                         throw new BusinessException(ResponseCode.CODE_500.getCode(), ResponseCode.CODE_500.getMsg() + ":用户空间信息更新失败");
                     }
@@ -146,7 +147,7 @@ public class FileServiceImpl implements FileService {
                 SimpleDateFormat format=new SimpleDateFormat("yyyyMM");
                 String mouth=format.format(new Date());
                 fileName = renameIfFileNameExist(userId, fileName, filePid);
-                String filePath=fileStoragePath+'/'+mouth+'/'+fileName;
+                String filePath=fileStoragePath+'\\'+mouth+'\\'+fileName;
                 String[] fileNameSlice=fileName.split("\\.");
                 String suffix=fileNameSlice[fileNameSlice.length-1];
                 Integer type=getFileCategory(suffix);
@@ -172,10 +173,17 @@ public class FileServiceImpl implements FileService {
                     accident=true;
                     throw new BusinessException(ResponseCode.CODE_500.getCode(), ResponseCode.CODE_500.getMsg() + ":文件信息更新失败");
                 }
+                //修改User剩余空间
+                LambdaUpdateWrapper<User> wrapper=new LambdaUpdateWrapper<>();
+                wrapper.eq(User::getUserId,userId);
+                wrapper.set(User::getUsedSpace,user.getUsedSpace()-size);
+                userMapper.update(null,wrapper);
                 //合并文件并，删除缓存文件夹和里面的内容，未来改成异步操作
-                /*FileUtil.mergeFile(tempFolderName,chunks,filePath);
-                FileUtil.deleteFolder(tempFolderName);*/
-                rabbitTemplate.convertAndSend(fileMergeQueue,new FileMergingMessage(tempFolderName,chunks,filePath));
+                String msgId=UUID.randomUUID().toString();
+                CorrelationData cd=new CorrelationData(msgId);
+                FileMergingMessage fileMergingMessage = new FileMergingMessage(fileId, tempFolderName, chunks, filePath);
+                rabbitTemplate.convertAndSend(fileMergeQueue, fileMergingMessage,cd);
+                redisCache.setCacheObject(msgId,fileMergingMessage,3,TimeUnit.MINUTES);
                 return fileUploadResultDto;
             }
             return fileUploadResultDto;

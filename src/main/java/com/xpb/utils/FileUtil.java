@@ -77,7 +77,6 @@ public class FileUtil {
             targetFile.getParentFile().mkdirs();
         }
         try (FileOutputStream out= new FileOutputStream(targetFile)){
-            createFile(targetPath);
             byte[] buffer=new byte[1024];
             int len=0;
             for (int i = 0; i < num ; i++) {
@@ -118,7 +117,7 @@ public class FileUtil {
         }
     }
 
-    public static void deleteFolder(String folderPath) {
+    public static void deleteFolder(String folderPath){
         Path folder = Paths.get(folderPath);
         try {
             Files.walkFileTree(folder, new SimpleFileVisitor<Path>() {
@@ -136,7 +135,7 @@ public class FileUtil {
             });
 
         } catch (IOException e) {
-            log.error("删除缓存失败");
+            log.error("删除缓存"+folderPath+"失败");
         }
     }
 }

@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class FileMergingMessage {
+    String fileId;
     String tempFilePath;
     int chunks;
     String targetPath;
