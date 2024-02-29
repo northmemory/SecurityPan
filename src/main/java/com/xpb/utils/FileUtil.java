@@ -23,7 +23,7 @@ public class FileUtil {
             }
             out.flush();
         } catch (FileNotFoundException e) {
-            log.error("出问题了文件不存在QAQ");
+            log.error("出问题了["+filePath+"]文件不存在QAQ");
             throw e;
         } catch (IOException e) {
             throw e;
@@ -52,7 +52,7 @@ public class FileUtil {
     public static void saveFile(InputStream input ,String filePath) throws IOException {
         File file=createFile(filePath);
         if (file==null){
-            log.error("创建文件失败");
+            log.error("创建["+filePath+"]文件失败");
         }
         try(input;
             FileOutputStream fileOutputStream=new FileOutputStream(file)) {
@@ -113,7 +113,7 @@ public class FileUtil {
         if(!directory.exists()){
             boolean result = directory.mkdir();
             if (!result)
-                log.error("创建文件夹失败");
+                log.error("创建["+filePath+"]文件夹失败");
         }
     }
 
@@ -135,7 +135,7 @@ public class FileUtil {
             });
 
         } catch (IOException e) {
-            log.error("删除缓存"+folderPath+"失败");
+            log.error("删除缓存["+folderPath+"]失败");
         }
     }
 }

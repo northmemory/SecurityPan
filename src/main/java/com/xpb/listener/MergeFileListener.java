@@ -31,16 +31,14 @@ public class MergeFileListener {
         String fileId=message.getFileId();
         try {
             FileUtil.mergeFile(tempFilePath,chunks,targetPath);
-            FileUtil.deleteFolder(tempFilePath);
             LambdaUpdateWrapper<FileInfo> wrapper=new LambdaUpdateWrapper<>();
             wrapper.eq(FileInfo::getFileId, fileId);
             wrapper.set(FileInfo::getStatus,FileStatusEnum.USING.getCode());
-            int update = mapper.update(null, wrapper);
-            if(update==0){
-                log.error(fileId+":数据库更新异常");
-            }
+            mapper.update(null, wrapper);
+            FileUtil.deleteFolder(tempFilePath);
         } catch (IOException e) {
-            log.error(tempFilePath+"合并失败");
+            log.error("文件["+tempFilePath+"]合并失败");
+            throw new RuntimeException(e);
         }
     }
 }
