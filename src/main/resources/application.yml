@@ -82,11 +82,11 @@ login:
 
 #File storage
 File:
-  file-path: E:\PanStorage
-  avatar-path: ${File.file-path}\avatar
-  temp-path: ${File.file-path}\temp
-  file-storage-path: ${File.file-path}\file
-
+  file-path: E:/PanStorage
+  avatar-path: ${File.file-path}/avatar
+  temp-path: ${File.file-path}/temp
+  file-storage-path: ${File.file-path}/file
+  ts-path: ${File.file-path}/ts
 #User Information
 User:
   init-space: 1048576
@@ -101,3 +101,7 @@ redis:
 #mq-name
 mq-name:
   file-merge: simple.queue
+
+#stream
+stream:
+  thumbnail-width: 150

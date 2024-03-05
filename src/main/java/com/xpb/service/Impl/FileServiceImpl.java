@@ -147,7 +147,7 @@ public class FileServiceImpl implements FileService {
                 SimpleDateFormat format=new SimpleDateFormat("yyyyMM");
                 String mouth=format.format(new Date());
                 fileName = renameIfFileNameExist(userId, fileName, filePid);
-                String filePath=fileStoragePath+'\\'+mouth+'\\'+fileName;
+                String filePath=fileStoragePath+'/'+mouth+'/'+fileName;
                 String[] fileNameSlice=fileName.split("\\.");
                 String suffix=fileNameSlice[fileNameSlice.length-1];
                 Integer type=getFileCategory(suffix);
@@ -181,7 +181,7 @@ public class FileServiceImpl implements FileService {
                 //合并文件并，删除缓存文件夹和里面的内容，未来改成异步操作
                 String msgId=UUID.randomUUID().toString();
                 CorrelationData cd=new CorrelationData(msgId);
-                FileMergingMessage fileMergingMessage = new FileMergingMessage(fileId, tempFolderName, chunks, filePath);
+                FileMergingMessage fileMergingMessage = new FileMergingMessage(fileId, tempFolderName, chunks, filePath,userId);
                 rabbitTemplate.convertAndSend(fileMergeQueue, fileMergingMessage,cd);
                 redisCache.setCacheObject(msgId,fileMergingMessage,3,TimeUnit.MINUTES);
                 return fileUploadResultDto;
@@ -262,5 +262,19 @@ public class FileServiceImpl implements FileService {
         if (FileCategoryEnum.DOC.getSuffix().contains(lower))
             return FileCategoryEnum.DOC.getCategory();
         return FileCategoryEnum.OTHER.getCategory();
+    }
+
+    @Override
+    public File getCover(String fileId, String userId) {
+        LambdaQueryWrapper<FileInfo> wrapper=new LambdaQueryWrapper<>();
+        wrapper.eq(FileInfo::getUserId,userId);
+        wrapper.eq(FileInfo::getFileId,fileId);
+        wrapper.select(FileInfo::getFileCover);
+        FileInfo fileInfo = fileInfoMapper.selectOne(wrapper);
+        String coverPath=fileInfo.getFileCover();
+        if (coverPath==null)
+            return null;
+        else
+            return new File(coverPath);
     }
 }

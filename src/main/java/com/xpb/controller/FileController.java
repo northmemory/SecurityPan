@@ -5,13 +5,17 @@ import com.xpb.aop.annotation.VerifyParam;
 import com.xpb.entities.LoginUser;
 import com.xpb.entities.dto.FileUploadResultDto;
 import com.xpb.service.FileService;
+import com.xpb.utils.FileUtil;
 import com.xpb.utils.ResponseResult;
 import com.xpb.utils.enums.FileCategoryEnum;
 import com.xpb.utils.exceptions.BusinessException;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
 
 @RestController
 @RequestMapping("/file")
@@ -48,5 +52,20 @@ public class FileController {
             return new ResponseResult(e.getWrongCode(),e.getMessage());
         }
         return new ResponseResult(200,uploadResult);
+    }
+    @GetMapping("/getFileCover/{fileId}")
+    public ResponseResult getFileCover(@AuthenticationPrincipal LoginUser loginUser,
+                                       @PathVariable("fileId") String fileId,
+                                       HttpServletResponse response){
+        if (fileId==null || fileId.equals(""))
+            return new ResponseResult(500,"fileId不可以为空");
+        File cover = fileService.getCover(fileId, loginUser.getUser().getUserId());
+        if (cover==null)
+            return new ResponseResult(500,"所请求的文件的缩略图不存在");
+        response.setHeader("Cache-Control","max-age=2592000");
+        String suffix= FileUtil.getFileSuffix(cover.getName());
+        String contextType="image/"+suffix;
+        response.setContentType(contextType);
+
     }
 }

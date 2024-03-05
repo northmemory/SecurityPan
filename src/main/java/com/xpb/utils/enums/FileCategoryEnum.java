@@ -32,6 +32,14 @@ public enum FileCategoryEnum {
         return null;
     }
 
+    public static FileCategoryEnum getBySuffix(String suffix){
+        for (FileCategoryEnum value : FileCategoryEnum.values()) {
+            if (value.suffix!=null && value.suffix.contains(suffix))
+                return value;
+        }
+        return OTHER;
+    }
+
     public Integer getCategory() {
         return category;
     }

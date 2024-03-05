@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.xpb.entities.User;
 import com.xpb.mapper.UserMapper;
 import com.xpb.utils.FileUtil;
+import com.xpb.utils.StreamMediaUtil;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Message;
@@ -19,6 +20,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -84,5 +86,15 @@ class SecurityPanApplicationTests {
         for (int i = 0; i < 1000000; i++) {
             rabbitTemplate.convertAndSend("lazy.queue",message);
         }
+    }
+    @Test
+    void ffmpegTest() throws IOException {
+        /*String targetPath="E:/PanStorage/file/202402/professional.mp4";
+        StreamMediaUtil.transferVideo("114514",targetPath);*/
+        /*String sourcePath="E:/PanStorage/file/202402/professional.mp4";
+        String targetPath="E:/PanStorage/file/202402/114514-cover.png";
+        StreamMediaUtil.generateThumbnailForVideo(sourcePath,150,targetPath);*/
+        StreamMediaUtil.generateThumbnailForImage("E:/PanStorage/file/202402/xpb.jpg",150,"E:/PanStorage/file/202402/xpb_.jpg");
+
     }
 }

@@ -12,4 +12,5 @@ public class FileMergingMessage {
     String tempFilePath;
     int chunks;
     String targetPath;
+    String userId;
 }

@@ -138,4 +138,19 @@ public class FileUtil {
             log.error("删除缓存["+folderPath+"]失败");
         }
     }
+
+    public static void copyFile(String sourcePath,String targetPath) throws IOException {
+        Path source = Paths.get(sourcePath);
+        Path target = Paths.get(targetPath);
+        try {
+            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            log.error("["+sourcePath+"]文件复制失败");
+            throw e;
+        }
+    }
+
+    public static String getFileSuffix(String fileName){
+
+    }
 }
