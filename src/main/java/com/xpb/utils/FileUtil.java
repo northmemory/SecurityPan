@@ -151,6 +151,8 @@ public class FileUtil {
     }
 
     public static String getFileSuffix(String fileName){
-
+        String[] fileNameSlice=fileName.split("\\.");
+        String suffix=fileNameSlice[fileNameSlice.length-1];
+        return suffix;
     }
 }

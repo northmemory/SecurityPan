@@ -13,7 +13,6 @@ import com.xpb.mapper.UserMapper;
 import com.xpb.service.FileService;
 import com.xpb.utils.FileUtil;
 import com.xpb.utils.RedisCache;
-import com.xpb.utils.ResponseResult;
 import com.xpb.utils.enums.*;
 import com.xpb.utils.exceptions.BusinessException;
 import jakarta.annotation.Resource;
@@ -245,9 +244,9 @@ public class FileServiceImpl implements FileService {
         else
             redisCache.setCacheObject(redisKey,fileSize+currentSize,redisKeyExpireTime, TimeUnit.MINUTES);
     }
-    private boolean deleteRedisTempSize(String userId,String fileId){
+    private void deleteRedisTempSize(String userId, String fileId){
         String redisKey=redisKeyPre+":"+userId+fileId;
-        return redisCache.deleteObject(redisKey);
+        redisCache.deleteObject(redisKey);
     }
     /*
     * 根据文件的后缀名识别文件的种类*/
@@ -265,7 +264,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public File getCover(String fileId, String userId) {
+    public String getCover(String fileId, String userId) {
         LambdaQueryWrapper<FileInfo> wrapper=new LambdaQueryWrapper<>();
         wrapper.eq(FileInfo::getUserId,userId);
         wrapper.eq(FileInfo::getFileId,fileId);
@@ -275,6 +274,46 @@ public class FileServiceImpl implements FileService {
         if (coverPath==null)
             return null;
         else
-            return new File(coverPath);
+            return coverPath;
+    }
+
+    @Override
+    @Transactional
+    public FileInfo createFolder(String userId, String filePid, String fileName) throws BusinessException {
+        checkFileName(fileName,filePid,userId,FileFolderTypeEnum.FOLDER.getType());
+        FileInfo folder=new FileInfo();
+        folder.setFileId(String.valueOf(IdWorker.getId()));
+        folder.setUserId(userId);
+        folder.setFilePid(filePid);
+        folder.setCreateTime(new Date());
+        folder.setFolderType(FileFolderTypeEnum.FOLDER.getType());
+        folder.setDelFlag(FileDeleteEnum.USING.getCode());
+        folder.setFileName(fileName);
+        folder.setStatus(FileStatusEnum.USING.getCode());
+        fileInfoMapper.insert(folder);
+        return folder;
+    }
+    private void checkFileName(String fileName, String filePid, String userId, Integer fileFolderType) throws BusinessException {
+        LambdaQueryWrapper<FileInfo> wrapper=new LambdaQueryWrapper<>();
+        wrapper.eq(FileInfo::getFileName,fileName);
+        wrapper.eq(FileInfo::getUserId,userId);
+        wrapper.eq(FileInfo::getFilePid,filePid);
+        wrapper.eq(FileInfo::getFolderType,fileFolderType);
+        Long result = fileInfoMapper.selectCount(wrapper);
+        if (result > 0)
+            throw new BusinessException(500,"请求创建的文件夹已经存在");
+    }
+
+    @Override
+    public List<FileInfoDto> getFolderInfo(String userId, String folderId) {
+        LambdaQueryWrapper<FileInfo> wrapper=new LambdaQueryWrapper<>();
+        wrapper.eq(FileInfo::getUserId,userId);
+        wrapper.eq(FileInfo::getFilePid,fileInfoMapper);
+        List<FileInfo> fileInfos = fileInfoMapper.selectList(wrapper);
+        List<FileInfoDto> result=new ArrayList<>();
+        fileInfos.forEach(fileInfo -> {
+            result.add(new FileInfoDto(fileInfo));
+        });
+        return result;
     }
 }
