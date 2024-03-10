@@ -2,20 +2,28 @@ package com.xpb.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xpb.entities.FileInfo;
 import com.xpb.entities.User;
+import com.xpb.entities.dto.FileDownLoadRedisDto;
+import com.xpb.entities.dto.FileDownLoadUrlDto;
 import com.xpb.entities.dto.FileInfoDto;
 import com.xpb.entities.dto.FileUploadResultDto;
 import com.xpb.listener.message.FileMergingMessage;
 import com.xpb.mapper.FileInfoMapper;
 import com.xpb.mapper.UserMapper;
 import com.xpb.service.FileService;
+import com.xpb.utils.Constants;
 import com.xpb.utils.FileUtil;
 import com.xpb.utils.RedisCache;
+import com.xpb.utils.StringUtil;
 import com.xpb.utils.enums.*;
 import com.xpb.utils.exceptions.BusinessException;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -27,6 +35,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -69,7 +80,7 @@ public class FileServiceImpl implements FileService {
     private String fileMergeQueue;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = BusinessException.class)
     public FileUploadResultDto upload(String userId, MultipartFile file, String fileId, String fileName,
                                       String filePid, String fileMd5, Integer chunkIndex, Integer chunks) throws BusinessException {
         boolean accident=false;
@@ -293,6 +304,7 @@ public class FileServiceImpl implements FileService {
         fileInfoMapper.insert(folder);
         return folder;
     }
+
     private void checkFileName(String fileName, String filePid, String userId, Integer fileFolderType) throws BusinessException {
         LambdaQueryWrapper<FileInfo> wrapper=new LambdaQueryWrapper<>();
         wrapper.eq(FileInfo::getFileName,fileName);
@@ -305,15 +317,72 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public List<FileInfoDto> getFolderInfo(String userId, String folderId) {
+    public List<FileInfoDto> getFolderInfo(String userId, String folderId, Integer pageNum) {
         LambdaQueryWrapper<FileInfo> wrapper=new LambdaQueryWrapper<>();
         wrapper.eq(FileInfo::getUserId,userId);
         wrapper.eq(FileInfo::getFilePid,fileInfoMapper);
-        List<FileInfo> fileInfos = fileInfoMapper.selectList(wrapper);
-        List<FileInfoDto> result=new ArrayList<>();
+        wrapper.orderByAsc(FileInfo::getFileId);
+        Page<FileInfo> page=new Page<>(pageNum-1,50);
+        IPage<FileInfo> records = fileInfoMapper.selectPage(page, wrapper);
+        List<FileInfo> fileInfos = records.getRecords();
+        ArrayList<FileInfoDto> result=new ArrayList<>();
         fileInfos.forEach(fileInfo -> {
             result.add(new FileInfoDto(fileInfo));
         });
         return result;
+    }
+
+    @Override
+    @Transactional(rollbackFor = BusinessException.class)
+    public boolean renameFile(String fileId, String userId, String newFileName) throws BusinessException {
+        LambdaQueryWrapper<FileInfo> wrapper=new LambdaQueryWrapper();
+        wrapper.eq(FileInfo::getFileId,fileId).eq(FileInfo::getUserId,userId);
+        FileInfo fileInfo = fileInfoMapper.selectOne(wrapper);
+        if(fileInfo==null)
+            throw new BusinessException(ResponseCode.CODE_500.getCode(), "请求的文件不存在");
+        String newName=newFileName+FileUtil.getFileSuffix(fileInfo.getFileName());
+        newName = renameIfFileNameExist(userId, newName, fileInfo.getFilePid());
+        LambdaUpdateWrapper<FileInfo> updateWrapper=new LambdaUpdateWrapper<>();
+        updateWrapper.eq(FileInfo::getUserId,userId)
+                .eq(FileInfo::getFileId,fileId)
+                .set(FileInfo::getFileName,newName);
+        int update = fileInfoMapper.update(null, updateWrapper);
+        return update==1;
+    }
+
+    @Override
+    public FileDownLoadUrlDto generateDownloadUrl(String fileId, String userId) throws BusinessException {
+        LambdaQueryWrapper<FileInfo> wrapper=new LambdaQueryWrapper();
+        wrapper.eq(FileInfo::getFileId,fileId).eq(FileInfo::getFileId,fileId);
+        FileInfo fileInfo = fileInfoMapper.selectOne(wrapper);
+        if (fileInfo==null || fileInfo.getStatus()!=FileStatusEnum.USING.getCode())
+            throw new BusinessException(ResponseCode.CODE_500.getCode(), "所请求的文件Id错误");
+        String filePath=fileInfo.getFilePath();
+        String randomKey= StringUtil.generateRandomString(Constants.FileUrlKeyLength);
+        FileDownLoadRedisDto redisDto=new FileDownLoadRedisDto(fileInfo.getFileName(),filePath);
+        redisCache.setCacheObject(randomKey,redisDto,Constants.FileUrlExpireTime,Constants.FileUrlExpireTimeunit);
+        return new FileDownLoadUrlDto(fileId,randomKey);
+    }
+
+    public void download(HttpServletRequest request, HttpServletResponse response, String code)  {
+        try {
+            FileDownLoadRedisDto fileInfo=redisCache.getCacheObject(code);
+            if (fileInfo==null){
+                response.getWriter().print("没有下载权限");
+                return;
+            }
+            String fileName=fileInfo.getFileName();
+            String filePath=fileInfo.getFilePath();
+            response.setContentType("application/x-msdownload; charset=UTF-8");
+            if (request.getHeader("User-Agent").toLowerCase().indexOf("msie") > 0){
+                fileName= URLEncoder.encode(fileName, StandardCharsets.UTF_8);
+            }else {
+                fileName=new String(fileName.getBytes(StandardCharsets.UTF_8),StandardCharsets.ISO_8859_1);
+            }
+            response.setHeader("Content-Disposition","attachment;filename=\""+fileName+"\"");
+            FileUtil.readFile(response.getOutputStream(),filePath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

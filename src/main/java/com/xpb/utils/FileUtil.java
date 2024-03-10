@@ -1,6 +1,7 @@
 package com.xpb.utils;
 
 import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,6 +13,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 
 @Slf4j
 public class FileUtil {
+
     //向流中传输文件
     public static void readFile(OutputStream out, String filePath) throws IOException {
         try (out;
@@ -155,4 +157,17 @@ public class FileUtil {
         String suffix=fileNameSlice[fileNameSlice.length-1];
         return suffix;
     }
+
+    public static String getFilePrefix(String filePath){
+        String[] filePathSlice=filePath.split("\\.");
+        if (filePathSlice.length==1)
+            return filePath;
+        StringBuilder builder=new StringBuilder();
+        for (int i=0;i<filePathSlice.length-1;i++){
+            builder.append(filePathSlice[i]);
+        }
+        return builder.toString();
+    }
+
+
 }

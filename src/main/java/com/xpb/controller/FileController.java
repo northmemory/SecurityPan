@@ -1,23 +1,29 @@
 package com.xpb.controller;
 
+import com.xpb.aop.annotation.CurrentLimiting;
 import com.xpb.aop.annotation.GlobalInterceptor;
 import com.xpb.aop.annotation.VerifyParam;
 import com.xpb.entities.FileInfo;
 import com.xpb.entities.LoginUser;
+import com.xpb.entities.dto.FileDownLoadUrlDto;
 import com.xpb.entities.dto.FileInfoDto;
 import com.xpb.entities.dto.FileUploadResultDto;
 import com.xpb.entities.dto.FolderDto;
 import com.xpb.service.FileService;
+import com.xpb.service.PreviewService;
 import com.xpb.utils.FileUtil;
 import com.xpb.utils.ResponseResult;
 import com.xpb.utils.enums.FileCategoryEnum;
 import com.xpb.utils.enums.ResponseCode;
 import com.xpb.utils.exceptions.BusinessException;
+import jakarta.annotation.Resource;
 import jakarta.servlet.ServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,6 +39,8 @@ public class FileController {
 
     @Autowired
     FileService fileService;
+    @Resource
+    PreviewService previewService;
     @GetMapping ("/loadFileList/{fileCateGory}")
     public ResponseResult loadFileList(@AuthenticationPrincipal LoginUser loginUser ,@PathVariable("fileCateGory") String cateGory){
         FileCategoryEnum fileCategory = FileCategoryEnum.getByCode(cateGory);
@@ -100,11 +108,86 @@ public class FileController {
         }
     }
 
-    @GetMapping("/getFolderInfo/{folderId}")
+    @GetMapping("/getFolderInfo/{folderId}/{page}")
     @GlobalInterceptor
     public ResponseResult getFolderInfo(@AuthenticationPrincipal LoginUser loginUser,
-                                                 @VerifyParam @PathVariable("folderId") String folderId){
-        List<FileInfoDto> folderInfo = fileService.getFolderInfo(loginUser.getUser().getUserId(), folderId);
+                                                 @VerifyParam @PathVariable("folderId") String folderId,
+                                                 @VerifyParam @PathVariable("folderId") Integer pageNum){
+        List<FileInfoDto> folderInfo = fileService.getFolderInfo(loginUser.getUser().getUserId(), folderId, pageNum);
         return new ResponseResult<>(ResponseCode.CODE_200.getCode(), folderInfo);
     }
+
+    @GetMapping("/getVideoInfo/{fileInfo}")
+    @GlobalInterceptor
+    public void getVideoInfo(@AuthenticationPrincipal LoginUser loginUser,
+                                       @VerifyParam @PathVariable("fileInfo") String fileInfo,
+                                       HttpServletResponse response) throws IOException {
+        String userId=loginUser.getUser().getUserId();
+        try {
+            File file = previewService.previewVideo(fileInfo, userId);
+            FileUtil.readFile(response.getOutputStream(),file.getPath());
+        } catch (BusinessException e) {
+            response.setStatus(ResponseCode.CODE_500.getCode());
+            response.getWriter().print("服务器发生错误请联系管理员");
+        } catch (IOException e) {
+            log.error("User"+userId+"的文件["+fileInfo+"]发生了IO错误");
+            response.setStatus(ResponseCode.CODE_500.getCode());
+            response.getWriter().print("服务器发生错误请联系管理员");
+        }
+    }
+    @GetMapping("/getFileInfo/{fileId}")
+    public void getFileInfo(@AuthenticationPrincipal LoginUser loginUser,
+                            @VerifyParam @PathVariable("fileId") String fileId,
+                            HttpServletResponse response) throws IOException {
+        String userId=loginUser.getUser().getUserId();
+        try {
+            File file = previewService.previewFile(fileId,userId);
+            FileUtil.readFile(response.getOutputStream(),file.getPath());
+        } catch (BusinessException e) {
+            response.setStatus(ResponseCode.CODE_500.getCode());
+            response.getWriter().print("服务器发生错误请联系管理员");
+        } catch (IOException e) {
+            log.error("User"+userId+"的文件["+fileId+"]发生了IO错误");
+            response.setStatus(ResponseCode.CODE_500.getCode());
+            response.getWriter().print("服务器发生错误请联系管理员");
+        }
+    }
+
+    @PostMapping("/renameFile")
+    @GlobalInterceptor
+    public ResponseResult rename(@AuthenticationPrincipal LoginUser loginUser,
+                       @VerifyParam String fileId,
+                       @VerifyParam String fileName){
+        String userId=loginUser.getUser().getUserId();
+        try {
+            boolean success = fileService.renameFile(fileId, userId, fileName);
+            if (success)
+                return new ResponseResult(ResponseCode.CODE_200.getCode(), "更新成功");
+            return new ResponseResult(ResponseCode.CODE_500.getCode(), "更新失败");
+        } catch (BusinessException e) {
+            return new ResponseResult(ResponseCode.CODE_200.getCode(), e.getMessage());
+        }
+    }
+
+    @GetMapping("/getDownloadUrl/{fileId}")
+    @GlobalInterceptor
+    public ResponseResult getUrl(@AuthenticationPrincipal LoginUser loginUser,
+                                 @PathVariable("fileId") @VerifyParam String fileId){
+        try {
+            FileDownLoadUrlDto fileDownLoadUrlDto = fileService.generateDownloadUrl(fileId, loginUser.getUser().getUserId());
+            return new ResponseResult<>(ResponseCode.CODE_200.getCode(), fileDownLoadUrlDto);
+        } catch (BusinessException e) {
+            return new ResponseResult<>(ResponseCode.CODE_500.getCode(), e.getMessage());
+        }
+    }
+
+    @GetMapping("/download/{fileCode}")
+    @GlobalInterceptor
+    @CurrentLimiting
+    public void downlaod(@AuthenticationPrincipal LoginUser loginUser,
+                         @PathVariable("fileCode") @VerifyParam String code,
+                         HttpServletResponse response, HttpServletRequest request) throws BusinessException, IOException {
+        fileService.download(request,response,code);
+    }
+
 }

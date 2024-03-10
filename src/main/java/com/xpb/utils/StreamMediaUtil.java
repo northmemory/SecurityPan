@@ -16,7 +16,7 @@ public class StreamMediaUtil {
 
     private static final String CMD_TRANSFER_2TS = "ffmpeg -y -i %s -vcodec copy -acodec copy -vbsf h264_mp4toannexb %s";
 
-    private static final String CMD_CUT_TS = "ffmpeg -i %s -c copy -map 0 -f segment -segment_list %s -segment_time 30 %s/%s_%%04d.ts";
+    private static final String CMD_CUT_TS = "ffmpeg -i %s -c copy -map 0 -f segment -segment_list %s -segment_time 30 %s\\%s_%%04d.ts";
 
     private static final String CMD_GEN_COVER_4_VIDEO="ffmpeg -i %s -y -vframes 1 -vf scale=%d:%d %s";
 
@@ -33,7 +33,7 @@ public class StreamMediaUtil {
         try {
             String cmd=String.format(CMD_TRANSFER_2TS,videoFilePath,tsPath);
             CommandUtil.exec(cmd);
-            cmd=String.format(CMD_CUT_TS,tsPath,folder.getPath()+"/index.m3u8",folder.getPath(),fileId);
+            cmd=String.format(CMD_CUT_TS,tsPath,folder.getPath()+"\\index.m3u8",folder.getPath(),fileId);
             CommandUtil.exec(cmd);
             new File(tsPath).delete();
         } catch (IOException e) {

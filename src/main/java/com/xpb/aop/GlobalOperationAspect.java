@@ -29,11 +29,14 @@ public class GlobalOperationAspect {
     }
     @Around("requestInterceptor(interceptor)")
     public Object AroundAdvice(ProceedingJoinPoint pointcut, GlobalInterceptor interceptor) throws Throwable {
-        Object target = pointcut.getTarget();
+
         Object[] args = pointcut.getArgs();
-        String methodName=pointcut.getSignature().getName();
+        Object target = pointcut.getTarget();
+        /*String methodName=pointcut.getSignature().getName();
         Class<?>[] parameterTypes = ((MethodSignature) pointcut.getSignature()).getMethod().getParameterTypes();
-        Method method= target.getClass().getMethod(methodName,parameterTypes);
+        Method method= target.getClass().getMethod(methodName,parameterTypes);*/
+        Method method = ((MethodSignature) pointcut.getSignature()).getMethod();
+
         if (interceptor.checkParams()){
             try {
                 validateParams(method,args);
